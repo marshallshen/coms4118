@@ -19,26 +19,25 @@
 // fault, calls_left
 
 asmlinkage int sys_fail(int N){
-	// INFO: if N > 0, Nth system call will return an error
-	// INFO: if N == 0, stop this process if there is already a fault injection in progress
-	// INFO: if N < 0, 
 
 	struct thread_info *thread;
 	struct task_struct *task;
 
-	// TODO: check that the argument is valid
-	// Cases: n<0, n=0 w/ fault injection in progress
-	if(N < 0)
-		return (-EINVAL);
-
-	// need to initialize the values in the struct
-
-	// update/record bookkeeping information
+	// record bookkeeping information in task_struct
 	thread = current_thread_info();
 	task = thread->task;
 
-	//task->fault = 0;
-	task->calls_left = N - 1;
+	// cases: n=0 w/ fault injection in progress
+	if(N == 0 && task->fault == 1){
+		task->fault = 0;
+		return 0;
+	}else if(N <= 0){ // n<0, n=0 w/o fault injection
+		return (-EINVAL);
+	}
+
+	// initialize|renew fault injection session
+	task->fault = 1;
+	task->calls_left = N;
 
 	return 0;
 }
@@ -49,8 +48,8 @@ long should_fail(void){
 	struct thread_info *thread = current_thread_info();
 	struct task_struct *task = thread->task;
 
-	if(task->calls_left-- == 0){
-		task->fault = 1;
+	// only fails system call if fault injection session is active
+	if(task->fault == 1 && --(task->calls_left) == 0){
 		return 1;
 	}
 
@@ -59,9 +58,11 @@ long should_fail(void){
 
 // injects fault by returning an error code
 long fail_syscall(void){
-	// similar to other system call routines
-	// pick appropriate error code to return
+	
+	struct thread_info *thread = current_thread_info();
+	struct task_struct *task = thread->task;
 
+	task->fault = 0; // ends fault injection session
 	return (-ERESTART);
 }
 
