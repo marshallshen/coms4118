@@ -273,6 +273,11 @@ struct cfs_rq {
 #endif /* CONFIG_FAIR_GROUP_SCHED */
 };
 
+struct mycfs_rq {
+	struct task_struct *waiting;
+	struct rq *rq; // cpu to which this runqueue is attached
+};
+
 static inline int rt_bandwidth_enabled(void)
 {
 	return sysctl_sched_rt_runtime >= 0;
@@ -371,6 +376,7 @@ struct rq {
 	u64 nr_switches;
 
 	struct cfs_rq cfs;
+	struct mycfs_rq mycfs;
 	struct rt_rq rt;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
