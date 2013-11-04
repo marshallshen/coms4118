@@ -44,17 +44,16 @@ const struct sched_class mycfs_sched_class = {
 	.switched_to = switched_to_mycfs,
 	.get_rr_interval = get_rr_interval_mycfs
 
-// we don't need:
-// .yield_to_task =
-// .rq_online = N
-// .rq_offline =  N
-// .task_waking = ?
-// .task_fork = yes
-// .switched_from = yes
-// .task_move_group =
+	// we don't need:
+	// .yield_to_task =
+	// .rq_online = N
+	// .rq_offline =  N
+	// .task_waking = ?
+	// .task_fork = yes
+	// .switched_from = yes
+	// .task_move_group =
 
 };
-
 
 /*
 	Called when a task enters a runnable state.
@@ -62,6 +61,17 @@ const struct sched_class mycfs_sched_class = {
 	increments the nr_running variable.
 */
 static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
+
+	// get our runqueue
+	struct mycfs_rq *mycfs = &rq->mycfs;
+	
+	// add the task to our runqueue - just one process for now
+	mycfs->waiting = p;
+
+	// increment nr_running
+	inc_nr_running(rq);
+	mycfs->nr_running++;
+
 	printk(KERN_INFO "enqueue_task_mycfs\n");
 }
 
@@ -71,7 +81,15 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
    	the nr_running variable.
 */
 static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
+
+	struct mycfs_rq *mycfs = &rq->mycfs;
+	mycfs->waiting = NULL;
+
+	dec_nr_running(rq);
+	mycfs->nr_running--;
+
 	printk(KERN_INFO "dequeue_task_mycfs\n");
+
 }
 
 /*
@@ -94,11 +112,11 @@ static void check_preempt_curr_mycfs(struct rq *rq, struct task_struct *p, int w
 // This function chooses the most appropriate task eligible to run next.	
 static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 
-	struct mycfs_rq mycfs = rq->mycfs;
-	struct task_struct *next = mycfs.waiting;
+	struct mycfs_rq *mycfs = &rq->mycfs;
+	struct task_struct *next = mycfs->waiting;
 
 	if(next){
-		printk(KERN_INFO "pick_next_task_mycfs: return next");
+		printk(KERN_INFO "pick_next_task_mycfs: return next %d", (int) next->pid);
 		return next;
 	}
 

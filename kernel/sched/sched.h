@@ -276,6 +276,7 @@ struct cfs_rq {
 struct mycfs_rq {
 	struct task_struct *waiting;
 	struct rq *rq; // cpu to which this runqueue is attached
+	unsigned long nr_running;
 };
 
 static inline int rt_bandwidth_enabled(void)
