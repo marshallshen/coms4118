@@ -67,7 +67,7 @@ const struct sched_class mycfs_sched_class = {
 	increments the nr_running variable.
 */
 static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
-	printk("enqueue_task_mycfs");
+	printk(KERN_INFO "enqueue_task_mycfs\n");
 }
 
 /*
@@ -76,7 +76,7 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
    	the nr_running variable.
 */
 static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
-	printk("dequeue_task_mycfs");
+	printk(KERN_INFO "dequeue_task_mycfs\n");
 }
 
 /*
@@ -85,7 +85,7 @@ static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
    	entity at the right-most end of the red-black tree.
 */
 static void yield_task_mycfs(struct rq *rq){
-	printk("yield_task_mycfs");
+	printk(KERN_INFO "yield_task_mycfs\n");
 }
 
 /*
@@ -93,23 +93,23 @@ static void yield_task_mycfs(struct rq *rq){
    	preempt the currently running task. (check_preempt_curr)
 */
 static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_flags){
-	printk("check_preempt_curr");
+	printk(KERN_INFO "check_preempt_curr\n");
 }
 
 // This function chooses the most appropriate task eligible to run next.
 static struct task_struct *pick_next_task_mycfs(struct rq *rq){
-	printk("pick_next_task_mycfs");
+	printk(KERN_INFO "pick_next_task_mycfs\n");
 	// return pointer to task struct
 	return NULL;
 }
 
 // do we need this?
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
-	printk("put_prev_task_mycfs");
+	printk(KERN_INFO "put_prev_task_mycfs\n");
 }
 
 static int select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags){
-	printk("select_task_rq_fair");
+	printk(KERN_INFO "select_task_rq_fair\n");
 	return 0;
 }
 
@@ -118,7 +118,7 @@ static int select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flag
    	its task group.
 */
 static void set_curr_task_mycfs(struct rq *rq){
-	printk("set_curr_task_mycfs");
+	printk(KERN_INFO "set_curr_task_mycfs\n");
 }
 
 /*
@@ -126,19 +126,19 @@ static void set_curr_task_mycfs(struct rq *rq){
    	process switch.  This drives the running preemption.
 */
 static void task_tick_mycfs(struct rq *rq, struct task_struct *curr, int queued){
-	printk("task_tick_mycfs");
+	printk(KERN_INFO "task_tick_mycfs\n");
 }
 
 
 static void prio_changed_mycfs(struct rq *rq, struct task_struct *p, int oldprio){
-	printk("prio_changed_mycfs");
+	printk(KERN_INFO "prio_changed_mycfs\n");
 }
 
 static void switched_to_mycfs(struct rq *rq, struct task_struct *p){
-	printk("switched_to_mycfs");
+	printk(KERN_INFO "switched_to_mycfs\n");
 }
 
 static unsigned int get_rr_interval_mycfs(struct rq *rq, struct task_struct *task){
-	printk("get_rr_interval_mycfs");
+	printk(KERN_INFO "get_rr_interval_mycfs\n");
 	return 0;
 }
