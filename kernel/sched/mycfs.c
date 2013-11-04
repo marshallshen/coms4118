@@ -14,10 +14,10 @@
 static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags);
 static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags);
 static void yield_task_mycfs(struct rq *rq);
-static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_flags);
+static void check_preempt_curr_mycfs(struct rq *rq, struct task_struct *p, int wake_flags);
 static struct task_struct *pick_next_task_mycfs(struct rq *rq);
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev);
-static int select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags);
+static int select_task_rq_mycfs(struct task_struct *p, int sd_flag, int wake_flags);
 static void set_curr_task_mycfs(struct rq *rq);
 static void task_tick_mycfs(struct rq *rq, struct task_struct *curr, int queued);
 static void prio_changed_mycfs(struct rq *rq, struct task_struct *p, int oldprio);
@@ -34,29 +34,24 @@ const struct sched_class mycfs_sched_class = {
 	.enqueue_task = enqueue_task_mycfs,
 	.dequeue_task = dequeue_task_mycfs,
 	.yield_task = yield_task_mycfs,
-	.check_preempt_curr = check_preempt_wakeup,
+	.check_preempt_curr = check_preempt_curr_mycfs,
 	.pick_next_task = pick_next_task_mycfs,
 	.put_prev_task = put_prev_task_mycfs,
-	.select_task_rq = select_task_rq_fair, // select different rq based on processor
+	.select_task_rq = select_task_rq_mycfs, // select different rq based on processor
 	.set_curr_task = set_curr_task_mycfs,
 	.task_tick = task_tick_mycfs,
 	.prio_changed = prio_changed_mycfs,
 	.switched_to = switched_to_mycfs,
 	.get_rr_interval = get_rr_interval_mycfs
 
-// shit we don't need:
+// we don't need:
 // .yield_to_task =
 // .rq_online = N
 // .rq_offline =  N
 // .task_waking = ?
 // .task_fork = yes
 // .switched_from = yes
-
-/*
-#ifdef CONFIG_FAIR_GROUP_SCHED
-	.task_move_group =
-#endif
-*/
+// .task_move_group =
 
 };
 
@@ -92,23 +87,30 @@ static void yield_task_mycfs(struct rq *rq){
 	This function checks if a task that entered the runnable state should
    	preempt the currently running task. (check_preempt_curr)
 */
-static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_flags){
+static void check_preempt_curr_mycfs(struct rq *rq, struct task_struct *p, int wake_flags){
 	printk(KERN_INFO "check_preempt_curr\n");
 }
 
-// This function chooses the most appropriate task eligible to run next.
+// This function chooses the most appropriate task eligible to run next.	
 static struct task_struct *pick_next_task_mycfs(struct rq *rq){
-	printk(KERN_INFO "pick_next_task_mycfs\n");
-	// return pointer to task struct
+
+	struct mycfs_rq mycfs = rq->mycfs;
+	struct task_struct *next = mycfs.waiting;
+
+	if(next){
+		printk(KERN_INFO "pick_next_task_mycfs: return next");
+		return next;
+	}
+
 	return NULL;
 }
 
-// do we need this?
+// do we need this - YES
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
 	printk(KERN_INFO "put_prev_task_mycfs\n");
 }
 
-static int select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags){
+static int select_task_rq_mycfs(struct task_struct *p, int sd_flag, int wake_flags){
 	printk(KERN_INFO "select_task_rq_fair\n");
 	return 0;
 }

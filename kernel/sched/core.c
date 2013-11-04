@@ -4062,9 +4062,10 @@ __setscheduler(struct rq *rq, struct task_struct *p, int policy, int prio)
 	if (rt_prio(p->prio))
 		p->sched_class = &rt_sched_class;
 	else{
-		if(policy == SCHED_MYCFS)
+		if(policy == SCHED_MYCFS){
+			printk(KERN_INFO "__setscheduler: choose SCHED_MYCFS");
 			p->sched_class = &mycfs_sched_class;
-		else
+		}else
 			p->sched_class = &fair_sched_class;
 	}
 	set_load_weight(p);
@@ -4097,6 +4098,8 @@ static int __sched_setscheduler(struct task_struct *p, int policy,
 	const struct sched_class *prev_class;
 	struct rq *rq;
 	int reset_on_fork;
+
+	printk(KERN_INFO "setscheduler called");
 
 	/* may grab non-irq protected spin_locks */
 	BUG_ON(in_interrupt());
