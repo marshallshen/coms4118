@@ -55,6 +55,8 @@ const struct sched_class mycfs_sched_class = {
 
 };
 
+struct sched_mycfs_entity *this_sme;
+
 /*
 	Called when a task enters a runnable state.
 	It puts the scheduling entity (task) into the red-black tree and
@@ -65,8 +67,12 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	// get our runqueue
 	struct mycfs_rq *mycfs = &rq->mycfs;
 	
-	// add the task to our runqueue - just one process for now
-	mycfs->waiting = p;
+//	mycfs->waiting = *p; // TODO: REMOVE
+
+	// add sched_entity to our rq
+	mycfs->sme = &p->sme; // TODO: REMOVE
+	this_sme = &p->sme;
+	mycfs->sme->on_rq = 1;
 
 	// increment nr_running
 	inc_nr_running(rq);
@@ -83,7 +89,9 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 
 	struct mycfs_rq *mycfs = &rq->mycfs;
-	mycfs->waiting = NULL;
+//	mycfs->waiting = NULL; // TODO: REMOVE
+	mycfs->sme = NULL; // TODO: REMOVE
+	this_sme = NULL;
 
 	dec_nr_running(rq);
 	mycfs->nr_running--;
@@ -112,8 +120,22 @@ static void check_preempt_curr_mycfs(struct rq *rq, struct task_struct *p, int w
 // This function chooses the most appropriate task eligible to run next.	
 static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 
-	struct mycfs_rq *mycfs = &rq->mycfs;
-	struct task_struct *next = mycfs->waiting;
+//	struct mycfs_rq *mycfs = &rq->mycfs;
+//	struct task_struct *next = mycfs->waiting; // TODO: REMOVE
+//	struct sched_mycfs_entity *sme = mycfs->sme;
+	struct task_struct *next = NULL;
+
+	//next = container_of(sme, struct task_struct, sme);
+
+	if(this_sme){
+		printk(KERN_INFO "pick_next_task_mycfs: shed_mycfs_entity found %d-%d", (int) rq->nr_running, (int) rq->mycfs.nr_running);
+	}
+
+	if(this_sme){
+		next = container_of(this_sme, struct task_struct, sme);
+		printk(KERN_INFO "pick_next_task_mycfs: return sme next %d", (int) next->pid);
+		return next;
+	}
 
 	if(next){
 		printk(KERN_INFO "pick_next_task_mycfs: return next %d", (int) next->pid);

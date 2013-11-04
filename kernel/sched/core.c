@@ -1731,6 +1731,14 @@ static void __sched_fork(struct task_struct *p)
 	p->se.vruntime			= 0;
 	INIT_LIST_HEAD(&p->se.group_node);
 
+	// initialize sched_mycfs_entity
+	p->sme.on_rq 			= 0;
+	p->sme.exec_start 		= 0;
+	p->sme.vruntime 		= 0;
+	p->sme.sum_exec_runtime = 0;
+	p->sme.prev_sum_exec_runtime = 0;
+	p->sme.nr_migrations = 0;
+
 #ifdef CONFIG_SCHEDSTATS
 	memset(&p->se.statistics, 0, sizeof(p->se.statistics));
 #endif

@@ -1236,7 +1236,6 @@ struct sched_entity {
 
 struct sched_mycfs_entity {
 	struct rb_node		run_node;
-	struct list_head	group_node;
 	unsigned int		on_rq;
 	u64			exec_start;
 	u64			sum_exec_runtime;
@@ -1293,9 +1292,8 @@ struct task_struct {
 	unsigned int rt_priority;
 	const struct sched_class *sched_class;
 	struct sched_entity se;
-	struct sched_mycfs_entity mycfs;
+	struct sched_mycfs_entity sme;
 	struct sched_rt_entity rt;
-
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 	/* list of struct preempt_notifier: */
 	struct hlist_head preempt_notifiers;

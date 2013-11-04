@@ -274,9 +274,17 @@ struct cfs_rq {
 };
 
 struct mycfs_rq {
-	struct task_struct *waiting;
-	struct rq *rq; // cpu to which this runqueue is attached
-	unsigned long nr_running;
+	unsigned long nr_running;				// # of tasks on this rq
+	struct rb_root task_list;				// the root
+	struct rb_node rb_leftmost;				// pointer to leftmost node (dat constant time)
+	struct sched_mycfs_entity *curr;		// currently running entity on this rq
+
+	u64 exec_clock;
+	u64 min_vruntime;
+
+	struct rq *rq; // cpu to which this runqueue is attached - might be unnecessary
+	struct task_struct *waiting; // css2162 TODO: remove this
+	struct sched_mycfs_entity *sme;
 };
 
 static inline int rt_bandwidth_enabled(void)
