@@ -1234,6 +1234,17 @@ struct sched_entity {
 #endif
 };
 
+struct sched_mycfs_entity {
+	struct rb_node		run_node;
+	struct list_head	group_node;
+	unsigned int		on_rq;
+	u64			exec_start;
+	u64			sum_exec_runtime;
+	u64			vruntime;
+	u64			prev_sum_exec_runtime; // don't think we need to use this
+	u64			nr_migrations;
+};
+
 struct sched_rt_entity {
 	struct list_head run_list;
 	unsigned long timeout;
