@@ -42,6 +42,8 @@
 /* Can be ORed in to make sure the process is reverted back to SCHED_NORMAL on fork */
 #define SCHED_RESET_ON_FORK     0x40000000
 
+#define SCHED_MYCFS		6
+
 #ifdef __KERNEL__
 
 struct sched_param {
@@ -1232,6 +1234,17 @@ struct sched_entity {
 #endif
 };
 
+struct sched_mycfs_entity {
+	struct rb_node		run_node;
+	struct list_head	group_node;
+	unsigned int		on_rq;
+	u64			exec_start;
+	u64			sum_exec_runtime;
+	u64			vruntime;
+	u64			prev_sum_exec_runtime; // don't think we need to use this
+	u64			nr_migrations;
+};
+
 struct sched_rt_entity {
 	struct list_head run_list;
 	unsigned long timeout;
@@ -1280,6 +1293,7 @@ struct task_struct {
 	unsigned int rt_priority;
 	const struct sched_class *sched_class;
 	struct sched_entity se;
+	struct sched_mycfs_entity sme;
 	struct sched_rt_entity rt;
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS

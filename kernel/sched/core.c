@@ -4061,8 +4061,13 @@ __setscheduler(struct rq *rq, struct task_struct *p, int policy, int prio)
 	p->prio = rt_mutex_getprio(p);
 	if (rt_prio(p->prio))
 		p->sched_class = &rt_sched_class;
-	else
-		p->sched_class = &fair_sched_class;
+	else{
+		if(policy == SCHED_MYCFS){
+			printk(KERN_INFO "__setscheduler: choose SCHED_MYCFS");
+			p->sched_class = &mycfs_sched_class;
+		}else
+			p->sched_class = &fair_sched_class;
+	}
 	set_load_weight(p);
 }
 
@@ -4094,6 +4099,8 @@ static int __sched_setscheduler(struct task_struct *p, int policy,
 	struct rq *rq;
 	int reset_on_fork;
 
+	printk(KERN_INFO "setscheduler called");
+
 	/* may grab non-irq protected spin_locks */
 	BUG_ON(in_interrupt());
 recheck:
@@ -4107,7 +4114,7 @@ recheck:
 
 		if (policy != SCHED_FIFO && policy != SCHED_RR &&
 				policy != SCHED_NORMAL && policy != SCHED_BATCH &&
-				policy != SCHED_IDLE)
+				policy != SCHED_IDLE && policy != SCHED_MYCFS)
 			return -EINVAL;
 	}
 
@@ -4229,9 +4236,11 @@ recheck:
 
 	if (running)
 		p->sched_class->set_curr_task(rq);
-	if (on_rq)
+	if (on_rq){
+		printk("\nbefore enqueue \n");
 		enqueue_task(rq, p, 0);
-
+		printk("\nafter enqueue \n");
+	}
 	check_class_changed(rq, p, prev_class, oldprio);
 	task_rq_unlock(rq, p, &flags);
 
