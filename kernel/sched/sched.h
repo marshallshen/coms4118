@@ -273,6 +273,20 @@ struct cfs_rq {
 #endif /* CONFIG_FAIR_GROUP_SCHED */
 };
 
+struct mycfs_rq {
+	unsigned long nr_running;				// # of tasks on this rq
+	struct rb_root task_list;				// the root
+	struct rb_node rb_leftmost;				// pointer to leftmost node (dat constant time)
+	struct sched_mycfs_entity *curr;		// currently running entity on this rq
+
+	u64 exec_clock;
+	u64 min_vruntime;
+
+	struct rq *rq; // cpu to which this runqueue is attached - might be unnecessary
+	struct task_struct *waiting; // css2162 TODO: remove this
+	struct sched_mycfs_entity *sme;
+};
+
 static inline int rt_bandwidth_enabled(void)
 {
 	return sysctl_sched_rt_runtime >= 0;
@@ -371,6 +385,7 @@ struct rq {
 	u64 nr_switches;
 
 	struct cfs_rq cfs;
+	struct mycfs_rq mycfs;
 	struct rt_rq rt;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
@@ -856,8 +871,8 @@ enum cpuacct_stat_index {
 extern const struct sched_class stop_sched_class;
 extern const struct sched_class rt_sched_class;
 extern const struct sched_class fair_sched_class;
+extern const struct sched_class mycfs_sched_class;
 extern const struct sched_class idle_sched_class;
-
 
 #ifdef CONFIG_SMP
 
