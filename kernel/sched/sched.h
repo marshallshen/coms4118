@@ -276,7 +276,11 @@ struct cfs_rq {
 struct mycfs_rq {
 	struct task_struct *waiting;
 	struct rq *rq; // cpu to which this runqueue is attached
-	unsigned long nr_running;
+	unsigned long nr_running, h_nr_running;
+	u64 exec_clock, min_vruntime, min_vruntime_copy;
+	struct rb_root tasks_timeline;
+	struct rb_node* rb_leftmost;
+	struct sched_entity * curr,next,last,skip;
 };
 
 static inline int rt_bandwidth_enabled(void)
