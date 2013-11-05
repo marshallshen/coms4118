@@ -87,6 +87,8 @@ static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 
 	dec_nr_running(rq);
 	mycfs->nr_running--;
+	rb_erase(&se->run_node, &cfs_rq->tasks_timeline);
+
 
 	printk(KERN_INFO "dequeue_task_mycfs\n");
 
