@@ -13,6 +13,8 @@
 // todo: include in header file
 static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags);
 static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags);
+static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *se);
+static void dequeue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *se);
 static void yield_task_mycfs(struct rq *rq);
 static void check_preempt_curr_mycfs(struct rq *rq, struct task_struct *p, int wake_flags);
 static struct task_struct *pick_next_task_mycfs(struct rq *rq);
@@ -61,17 +63,18 @@ const struct sched_class mycfs_sched_class = {
 	increments the nr_running variable.
 */
 static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
-
 	// get our runqueue
 	struct mycfs_rq *mycfs = &rq->mycfs;
+        struct sched_mycfs_entity *sme = &p->sme;	
 	
+	printk("first entering enqueue\n");
 	// add the task to our runqueue - just one process for now
-	mycfs->waiting = p;
-
+	printk("pid inserted:%d \n",p->pid);
+	enqueue_entity(mycfs, sme);
+	
 	// increment nr_running
+	flags = ENQUEUE_WAKEUP;
 	inc_nr_running(rq);
-	mycfs->nr_running++;
-
 	printk(KERN_INFO "enqueue_task_mycfs\n");
 }
 
@@ -83,14 +86,42 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 
 	struct mycfs_rq *mycfs = &rq->mycfs;
-	mycfs->waiting = NULL;
+	struct sched_mycfs_entity *sme = &p->sme;
 
-	dec_nr_running(rq);
-	mycfs->nr_running--;
-
+	dequeue_entity(mycfs, sme);
 
 	printk(KERN_INFO "dequeue_task_mycfs\n");
 
+}
+
+static inline int entity_before(struct sched_mycfs_entity *a, struct sched_mycfs_entity *b)
+{
+	return (s64)(a->vruntime - b->vruntime) < 0;
+}
+
+static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sme)
+{
+	struct rb_node **link = &mycfs->tasks_timeline.rb_node;
+	struct rb_node *parent = NULL;
+	struct sched_mycfs_entity *entry;
+
+	while(*link){
+		parent = *link;
+		entry = rb_entry(parent, struct sched_mycfs_entity, run_node);
+		if(entity_before(sme,entry)){
+			link = &parent->rb_left;
+		} else {
+			link = &parent->rb_right;
+		}
+	}
+	rb_link_node(&sme->run_node, parent, link);
+	rb_insert_color(&sme->run_node, &mycfs->tasks_timeline);
+}
+
+
+static void dequeue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sme)
+{
+	rb_erase(&sme->run_node, &mycfs->tasks_timeline);
 }
 
 /*
@@ -112,7 +143,7 @@ static void check_preempt_curr_mycfs(struct rq *rq, struct task_struct *p, int w
 
 // This function chooses the most appropriate task eligible to run next.	
 static struct task_struct *pick_next_task_mycfs(struct rq *rq){
-
+/*
 	struct mycfs_rq *mycfs = &rq->mycfs;
 	struct task_struct *next = mycfs->waiting;
 
@@ -120,7 +151,8 @@ static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 		printk(KERN_INFO "pick_next_task_mycfs: return next %d", (int) next->pid);
 		return next;
 	}
-
+*/
+	
 	return NULL;
 }
 
