@@ -107,9 +107,9 @@ static inline int entity_before(struct sched_mycfs_entity *a, struct sched_mycfs
 	return (s64)(a->vruntime - b->vruntime) < 0;
 }
 
-static void update_curr(struct mycfs_rq *mycfs_rq) {
-	struct sched_mycfs_entity *curr = mycfs_rq->curr;
-		u64 now = container_of(mycfs_rq, struct rq, mycfs)->clock_task;
+static void update_curr(struct mycfs_rq *mycfs) {
+	struct sched_mycfs_entity *curr = mycfs->curr;
+		u64 now = container_of(mycfs, struct rq, mycfs)->clock_task;
 	unsigned long delta_exec;
 
 	//How long this process has been running for
@@ -126,7 +126,7 @@ static void update_curr(struct mycfs_rq *mycfs_rq) {
 
 	curr->exec_start = now;
 
-	mycfs_rq->runtime_remaining -= delta_exec;
+	mycfs->runtime_remaining -= delta_exec;
 
 
 }
