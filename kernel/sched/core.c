@@ -1729,6 +1729,9 @@ static void __sched_fork(struct task_struct *p)
 	p->se.prev_sum_exec_runtime	= 0;
 	p->se.nr_migrations		= 0;
 	p->se.vruntime			= 0;
+
+	p->sme.on_rq 			= 0;
+	p->sme.vruntime 		= 0;
 	INIT_LIST_HEAD(&p->se.group_node);
 
 #ifdef CONFIG_SCHEDSTATS
@@ -4061,8 +4064,13 @@ __setscheduler(struct rq *rq, struct task_struct *p, int policy, int prio)
 	p->prio = rt_mutex_getprio(p);
 	if (rt_prio(p->prio))
 		p->sched_class = &rt_sched_class;
-	else
-		p->sched_class = &fair_sched_class;
+	else{
+		if(policy == SCHED_MYCFS){
+			printk(KERN_INFO "__setscheduler: choose SCHED_MYCFS");
+			p->sched_class = &mycfs_sched_class;
+		}else
+			p->sched_class = &fair_sched_class;
+	}
 	set_load_weight(p);
 }
 
@@ -4094,6 +4102,8 @@ static int __sched_setscheduler(struct task_struct *p, int policy,
 	struct rq *rq;
 	int reset_on_fork;
 
+	printk(KERN_INFO "setscheduler called");
+
 	/* may grab non-irq protected spin_locks */
 	BUG_ON(in_interrupt());
 recheck:
@@ -4107,7 +4117,7 @@ recheck:
 
 		if (policy != SCHED_FIFO && policy != SCHED_RR &&
 				policy != SCHED_NORMAL && policy != SCHED_BATCH &&
-				policy != SCHED_IDLE)
+				policy != SCHED_IDLE && policy != SCHED_MYCFS)
 			return -EINVAL;
 	}
 
@@ -4231,7 +4241,6 @@ recheck:
 		p->sched_class->set_curr_task(rq);
 	if (on_rq)
 		enqueue_task(rq, p, 0);
-
 	check_class_changed(rq, p, prev_class, oldprio);
 	task_rq_unlock(rq, p, &flags);
 
