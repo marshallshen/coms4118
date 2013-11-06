@@ -11,6 +11,7 @@
 #include "sched.h"
 
 // todo: include in header file
+void init_mycfs_rq(struct mycfs_rq *mycfs);
 static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags);
 static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags);
 static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *se);
@@ -27,6 +28,13 @@ static void switched_to_mycfs(struct rq *rq, struct task_struct *p);
 static unsigned int get_rr_interval_mycfs(struct rq *rq, struct task_struct *task);
 
 unsigned int sysctl_sched_latency_mycfs = 10000000ULL; // 10ms (in nanoseconds)
+
+void init_mycfs_rq(struct mycfs_rq *mycfs)
+{
+	printk(KERN_INFO "init_mycfs_rq");
+	mycfs->tasks_timeline = RB_ROOT;
+	mycfs->min_vruntime =(u64)(-(1LL << 20));
+}
 
 // see fair.c line 5538 for initialization of fair_sched_class
 const struct sched_class mycfs_sched_class;
@@ -65,15 +73,14 @@ const struct sched_class mycfs_sched_class = {
 static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	// get our runqueue
 	struct mycfs_rq *mycfs = &rq->mycfs;
-        struct sched_mycfs_entity *sme = &p->sme;	
+    struct sched_mycfs_entity *sme = &p->sme;	
 	//sme->task = p;
 	
-	printk("first entering enqueue\n");
 	// add the task to our runqueue - just one process for now
 	printk("pid inserted:%d \n",p->pid);
 	enqueue_entity(mycfs, sme);
 	
-	// increment nr_running
+	mycfs->nr_running++;
 	inc_nr_running(rq);
 	printk(KERN_INFO "enqueue_task_mycfs\n");
 }
@@ -88,10 +95,12 @@ static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	struct mycfs_rq *mycfs = &rq->mycfs;
 	struct sched_mycfs_entity *sme = &p->sme;
 
+	printk(KERN_INFO "dequeue_task_mycfs: start\n");
 	dequeue_entity(mycfs, sme);
 
+	mycfs->nr_running--;
 	dec_nr_running(rq);
-	printk(KERN_INFO "dequeue_task_mycfs\n");
+	printk(KERN_INFO "dequeue_task_mycfs: start\n");
 
 }
 
@@ -109,19 +118,25 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 	while(*link){
 		parent = *link;
 		entry = rb_entry(parent, struct sched_mycfs_entity, run_node);
-		if(entity_before(sme,entry)){
+		//if(entity_before(sme,entry)){
 			link = &parent->rb_left;
-		} else {
-			link = &parent->rb_right;
-		}
+		//} else {
+		//	link = &parent->rb_right;
+		//}
 	}
-	rb_link_node(&sme->run_node, parent, link);
-	rb_insert_color(&sme->run_node, &mycfs->tasks_timeline);
+	//if(parent){
+		printk(KERN_INFO "enqueue_entity: before link\n");
+		rb_link_node(&sme->run_node, parent, link);
+		printk(KERN_INFO "enqueue_entity: before insert\n");
+		rb_insert_color(&sme->run_node, &mycfs->tasks_timeline); // BREAKS HERE:
+		printk(KERN_INFO "enqueue_entity: after insert node\n");
+	//}
 }
 
 
 static void dequeue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sme)
 {
+	printk(KERN_INFO "dequeue_entity:");
 	rb_erase(&sme->run_node, &mycfs->tasks_timeline);
 }
 
@@ -158,25 +173,31 @@ static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 	struct rb_node **link = &mycfs->tasks_timeline.rb_node;	
 	struct rb_node *parent = *link;
 	struct sched_mycfs_entity *sme = NULL;
+	//struct task_struct *p = NULL;
 	while(*link){
 		parent = *link;
 		link = &parent->rb_left;
 	}
+	if(!parent)
+		return NULL;
 	sme = rb_entry(parent, struct sched_mycfs_entity, run_node);
-	//return container_of(sme, struct task_struct, sme);
-	return NULL;
+	printk(KERN_INFO "pick_next_task_mycfs: before container of\n");	
+	return container_of(sme, struct task_struct, sme);
 }
 
 // do we need this - YES
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
-	//struct sched_mycfs_entity *sme = &prev->sme;
-	//struct mycfs_rq *mycfs = &rq->mycfs;
-	printk(KERN_INFO "put_prev_task_mycfs\n");
-	//if(prev->on_rq){
-		printk("in loop prev\n");
-	//	enqueue_entity(mycfs, sme);
-	//}
-	printk("after loop put_prev\n");
+	struct sched_mycfs_entity *sme = &prev->sme;
+	struct mycfs_rq *mycfs = &rq->mycfs;
+	printk(KERN_INFO "put_prev_task_mycfs: on_rq[%d]\n", prev->on_rq);
+	if(prev->on_rq){
+		dequeue_entity(mycfs, sme);
+	}
+	
+	enqueue_entity(mycfs, sme);
+
+	printk(KERN_INFO "put_prev_task_mycfs: after loop put_prev\n");
+	mycfs->curr = NULL;
 }
 
 static int select_task_rq_mycfs(struct task_struct *p, int sd_flag, int wake_flags){
@@ -184,11 +205,20 @@ static int select_task_rq_mycfs(struct task_struct *p, int sd_flag, int wake_fla
 	return task_cpu(p);
 }
 
+static void set_next_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sme)
+{
+	mycfs->curr = sme;
+}
+
 /*
 	This function is called when a task changes its scheduling class or changes
    	its task group.
 */
 static void set_curr_task_mycfs(struct rq *rq){
+	struct sched_mycfs_entity *sme = &rq->curr->sme;
+	struct mycfs_rq *mycfs = &rq->mycfs;
+
+	set_next_entity(mycfs, sme);
 	printk(KERN_INFO "set_curr_task_mycfs\n");
 }
 
@@ -207,9 +237,16 @@ static void prio_changed_mycfs(struct rq *rq, struct task_struct *p, int oldprio
 
 static void switched_to_mycfs(struct rq *rq, struct task_struct *p){
 	printk(KERN_INFO "switched_to_mycfs\n");
+	if(!p->sme.on_rq)
+		return;
+	if (rq->curr == p)
+		resched_task(rq->curr);
 }
 
 static unsigned int get_rr_interval_mycfs(struct rq *rq, struct task_struct *task){
+
+	struct mycfs_rq *mycfs = &rq->mycfs;
+
 	printk(KERN_INFO "get_rr_interval_mycfs\n");
-	return 0;
+	return sysctl_sched_latency_mycfs / mycfs->nr_running;
 }

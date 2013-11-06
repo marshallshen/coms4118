@@ -1729,10 +1729,15 @@ static void __sched_fork(struct task_struct *p)
 	p->se.prev_sum_exec_runtime	= 0;
 	p->se.nr_migrations		= 0;
 	p->se.vruntime			= 0;
+	INIT_LIST_HEAD(&p->se.group_node);
 
+	// initialize sched_mycfs_entity
 	p->sme.on_rq 			= 0;
 	p->sme.vruntime 		= 0;
-	INIT_LIST_HEAD(&p->se.group_node);
+	p->sme.exec_start		= 0;
+	p->sme.sum_exec_runtime = 0;
+	p->sme.prev_sum_exec_runtime = 0;
+	p->sme.nr_migrations	= 0;
 
 #ifdef CONFIG_SCHEDSTATS
 	memset(&p->se.statistics, 0, sizeof(p->se.statistics));
@@ -4102,8 +4107,6 @@ static int __sched_setscheduler(struct task_struct *p, int policy,
 	struct rq *rq;
 	int reset_on_fork;
 
-	printk(KERN_INFO "setscheduler called");
-
 	/* may grab non-irq protected spin_locks */
 	BUG_ON(in_interrupt());
 recheck:
@@ -4239,11 +4242,8 @@ recheck:
 
 	if (running)
 		p->sched_class->set_curr_task(rq);
-	if (on_rq){
-		printk("\nbefore enqueue \n");
+	if (on_rq)
 		enqueue_task(rq, p, 0);
-		printk("\nafter enqueue \n");
-	}
 	check_class_changed(rq, p, prev_class, oldprio);
 	task_rq_unlock(rq, p, &flags);
 
@@ -7014,6 +7014,7 @@ void __init sched_init(void)
 		rq->calc_load_active = 0;
 		rq->calc_load_update = jiffies + LOAD_FREQ;
 		init_cfs_rq(&rq->cfs);
+		init_mycfs_rq(&rq->mycfs);
 		init_rt_rq(&rq->rt, rq);
 #ifdef CONFIG_FAIR_GROUP_SCHED
 		root_task_group.shares = ROOT_TASK_GROUP_LOAD;

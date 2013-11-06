@@ -280,7 +280,7 @@ struct mycfs_rq {
 	u64 exec_clock, min_vruntime, min_vruntime_copy;
 	struct rb_root tasks_timeline;
 	struct rb_node* rb_leftmost;
-	struct sched_entity * curr,next,last,skip;
+	struct sched_mycfs_entity * curr,next,last,skip;
 };
 
 static inline int rt_bandwidth_enabled(void)
@@ -1165,6 +1165,7 @@ extern void print_cfs_stats(struct seq_file *m, int cpu);
 extern void print_rt_stats(struct seq_file *m, int cpu);
 
 extern void init_cfs_rq(struct cfs_rq *cfs_rq);
+extern void init_mycfs_rq(struct mycfs_rq *mycfs_rq);
 extern void init_rt_rq(struct rt_rq *rt_rq, struct rq *rq);
 extern void unthrottle_offline_cfs_rqs(struct rq *rq);
 
