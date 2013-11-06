@@ -31,6 +31,7 @@ unsigned int sysctl_sched_latency_mycfs = 10000000ULL; // 10ms (in nanoseconds)
 
 void init_mycfs_rq(struct mycfs_rq *mycfs)
 {
+	printk(KERN_INFO "init_mycfs_rq");
 	mycfs->tasks_timeline = RB_ROOT;
 	mycfs->min_vruntime =(u64)(-(1LL << 20));
 }
@@ -79,7 +80,7 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	printk("pid inserted:%d \n",p->pid);
 	enqueue_entity(mycfs, sme);
 	
-	// increment nr_running
+	mycfs->nr_running++;
 	inc_nr_running(rq);
 	printk(KERN_INFO "enqueue_task_mycfs\n");
 }
@@ -94,6 +95,7 @@ static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	struct mycfs_rq *mycfs = &rq->mycfs;
 	struct sched_mycfs_entity *sme = &p->sme;
 
+	printk(KERN_INFO "dequeue_task_mycfs: start\n");
 	dequeue_entity(mycfs, sme);
 
 	printk(KERN_INFO "dequeue_task_mycfs\n");
@@ -114,24 +116,25 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 	while(*link){
 		parent = *link;
 		entry = rb_entry(parent, struct sched_mycfs_entity, run_node);
-		if(entity_before(sme,entry)){
+		//if(entity_before(sme,entry)){
 			link = &parent->rb_left;
-		} else {
-			link = &parent->rb_right;
-		}
+		//} else {
+		//	link = &parent->rb_right;
+		//}
 	}
 	//if(parent){
-		printk("before link\n");
+		printk(KERN_INFO "enqueue_entity: before link\n");
 		rb_link_node(&sme->run_node, parent, link);
-		printk("before insert\n");
-		rb_insert_color(&sme->run_node, &mycfs->tasks_timeline);
-		printk("after insert node\n");
+		printk(KERN_INFO "enqueue_entity: before insert\n");
+		rb_insert_color(&sme->run_node, &mycfs->tasks_timeline); // BREAKS HERE:
+		printk(KERN_INFO "enqueue_entity: after insert node\n");
 	//}
 }
 
 
 static void dequeue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sme)
 {
+	printk(KERN_INFO "dequeue_entity:");
 	rb_erase(&sme->run_node, &mycfs->tasks_timeline);
 }
 
@@ -182,14 +185,17 @@ static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 
 // do we need this - YES
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
-	/*struct sched_mycfs_entity *sme = &prev->sme;
+	struct sched_mycfs_entity *sme = &prev->sme;
 	struct mycfs_rq *mycfs = &rq->mycfs;
-	printk(KERN_INFO "put_prev_task_mycfs\n");
+	printk(KERN_INFO "put_prev_task_mycfs: on_rq[%d]\n", prev->on_rq);
 	if(prev->on_rq){
-		enqueue_entity(mycfs, sme);
+		dequeue_entity(mycfs, sme);
 	}
-	printk("after loop put_prev\n");
-	mycfs->curr = NULL;*/
+	
+	enqueue_entity(mycfs, sme);
+
+	printk(KERN_INFO "put_prev_task_mycfs: after loop put_prev\n");
+	mycfs->curr = NULL;
 }
 
 static int select_task_rq_mycfs(struct task_struct *p, int sd_flag, int wake_flags){
@@ -236,6 +242,9 @@ static void switched_to_mycfs(struct rq *rq, struct task_struct *p){
 }
 
 static unsigned int get_rr_interval_mycfs(struct rq *rq, struct task_struct *task){
+
+	struct mycfs_rq *mycfs = &rq->mycfs;
+
 	printk(KERN_INFO "get_rr_interval_mycfs\n");
-	return 0;
+	return sysctl_sched_latency_mycfs / mycfs->nr_running;
 }

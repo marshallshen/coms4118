@@ -1633,6 +1633,11 @@ struct task_struct {
 #ifdef CONFIG_HAVE_HW_BREAKPOINT
 	atomic_t ptrace_bp_refcnt;
 #endif
+
+	// whether or not process wants to inject a fault (0 or 1)
+	int fault;
+	// how many system calls left before injecting fault
+	int calls_left;
 };
 
 /* Future-safe accessor for struct task_struct's cpus_allowed. */

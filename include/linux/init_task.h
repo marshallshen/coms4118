@@ -200,6 +200,8 @@ extern struct cred init_cred;
 	INIT_TRACE_RECURSION						\
 	INIT_TASK_RCU_PREEMPT(tsk)					\
 	INIT_CPUSET_SEQ							\
+	.fault = 0,							\
+	.calls_left = -1,						\
 }
 
 
