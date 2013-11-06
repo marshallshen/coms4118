@@ -118,11 +118,11 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 	while(*link){
 		parent = *link;
 		entry = rb_entry(parent, struct sched_mycfs_entity, run_node);
-		if(entity_before(sme,entry)){
+		//if(entity_before(sme,entry)){
 			link = &parent->rb_left;
-		} else {
-			link = &parent->rb_right;
-		}
+		//} else {
+		//	link = &parent->rb_right;
+		//}
 	}
 	//if(parent){
 		printk(KERN_INFO "enqueue_entity: before link\n");
@@ -181,7 +181,7 @@ static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 	if(!parent)
 		return NULL;
 	sme = rb_entry(parent, struct sched_mycfs_entity, run_node);
-	printk("before container of\n");	
+	printk(KERN_INFO "pick_next_task_mycfs: before container of\n");	
 	return container_of(sme, struct task_struct, sme);
 }
 
@@ -237,6 +237,10 @@ static void prio_changed_mycfs(struct rq *rq, struct task_struct *p, int oldprio
 
 static void switched_to_mycfs(struct rq *rq, struct task_struct *p){
 	printk(KERN_INFO "switched_to_mycfs\n");
+	if(!p->sme.on_rq)
+		return;
+	if (rq->curr == p)
+		resched_task(rq->curr);
 }
 
 static unsigned int get_rr_interval_mycfs(struct rq *rq, struct task_struct *task){
