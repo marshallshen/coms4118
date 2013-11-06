@@ -66,6 +66,7 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	// get our runqueue
 	struct mycfs_rq *mycfs = &rq->mycfs;
         struct sched_mycfs_entity *sme = &p->sme;	
+	//sme->task = p;
 	
 	printk("first entering enqueue\n");
 	// add the task to our runqueue - just one process for now
@@ -73,7 +74,6 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	enqueue_entity(mycfs, sme);
 	
 	// increment nr_running
-	flags = ENQUEUE_WAKEUP;
 	inc_nr_running(rq);
 	printk(KERN_INFO "enqueue_task_mycfs\n");
 }
@@ -90,7 +90,6 @@ static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 
 	dequeue_entity(mycfs, sme);
 
-	flags |= DEQUEUE_SLEEP;
 	dec_nr_running(rq);
 	printk(KERN_INFO "dequeue_task_mycfs\n");
 
@@ -154,18 +153,35 @@ static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 		return next;
 	}
 */
-	
+
+	struct mycfs_rq *mycfs = &rq->mycfs;
+	struct rb_node **link = &mycfs->tasks_timeline.rb_node;	
+	struct rb_node *parent = *link;
+	struct sched_mycfs_entity *sme = NULL;
+	while(*link){
+		parent = *link;
+		link = &parent->rb_left;
+	}
+	sme = rb_entry(parent, struct sched_mycfs_entity, run_node);
+	//return container_of(sme, struct task_struct, sme);
 	return NULL;
 }
 
 // do we need this - YES
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
+	//struct sched_mycfs_entity *sme = &prev->sme;
+	//struct mycfs_rq *mycfs = &rq->mycfs;
 	printk(KERN_INFO "put_prev_task_mycfs\n");
+	//if(prev->on_rq){
+		printk("in loop prev\n");
+	//	enqueue_entity(mycfs, sme);
+	//}
+	printk("after loop put_prev\n");
 }
 
 static int select_task_rq_mycfs(struct task_struct *p, int sd_flag, int wake_flags){
 	printk(KERN_INFO "select_task_rq_fair\n");
-	return 0;
+	return task_cpu(p);
 }
 
 /*
