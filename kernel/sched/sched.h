@@ -278,6 +278,7 @@ struct mycfs_rq {
 	struct rq *rq; // cpu to which this runqueue is attached
 	unsigned long nr_running, h_nr_running;
 	u64 exec_clock, min_vruntime, min_vruntime_copy;
+	s64 runtime_remaining;
 	struct rb_root tasks_timeline;
 	struct rb_node* rb_leftmost;
 	struct sched_mycfs_entity * curr,next,last,skip;
