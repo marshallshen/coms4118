@@ -177,20 +177,20 @@ static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 	if(!parent)
 		return NULL;
 	sme = rb_entry(parent, struct sched_mycfs_entity, run_node);
-	printk("before container of\n");	
+	printk(KERN_INFO "pick_next_task_mycfs: before container of\n");	
 	return container_of(sme, struct task_struct, sme);
 }
 
 // do we need this - YES
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
-	struct sched_mycfs_entity *sme = &prev->sme;
+	/*struct sched_mycfs_entity *sme = &prev->sme;
 	struct mycfs_rq *mycfs = &rq->mycfs;
 	printk(KERN_INFO "put_prev_task_mycfs\n");
 	if(prev->on_rq){
 		enqueue_entity(mycfs, sme);
 	}
 	printk("after loop put_prev\n");
-	mycfs->curr = NULL;
+	mycfs->curr = NULL;*/
 }
 
 static int select_task_rq_mycfs(struct task_struct *p, int sd_flag, int wake_flags){
@@ -230,6 +230,10 @@ static void prio_changed_mycfs(struct rq *rq, struct task_struct *p, int oldprio
 
 static void switched_to_mycfs(struct rq *rq, struct task_struct *p){
 	printk(KERN_INFO "switched_to_mycfs\n");
+	if(!p->sme.on_rq)
+		return;
+	if (rq->curr == p)
+		resched_task(rq->curr);
 }
 
 static unsigned int get_rr_interval_mycfs(struct rq *rq, struct task_struct *task){
