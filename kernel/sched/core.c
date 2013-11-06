@@ -1729,10 +1729,15 @@ static void __sched_fork(struct task_struct *p)
 	p->se.prev_sum_exec_runtime	= 0;
 	p->se.nr_migrations		= 0;
 	p->se.vruntime			= 0;
+	INIT_LIST_HEAD(&p->se.group_node);
 
+	// initialize sched_mycfs_entity
 	p->sme.on_rq 			= 0;
 	p->sme.vruntime 		= 0;
-	INIT_LIST_HEAD(&p->se.group_node);
+	p->sme.exec_start		= 0;
+	p->sme.sum_exec_runtime = 0;
+	p->sme.prev_sum_exec_runtime = 0;
+	p->sme.nr_migrations	= 0;
 
 #ifdef CONFIG_SCHEDSTATS
 	memset(&p->se.statistics, 0, sizeof(p->se.statistics));
@@ -4101,8 +4106,6 @@ static int __sched_setscheduler(struct task_struct *p, int policy,
 	const struct sched_class *prev_class;
 	struct rq *rq;
 	int reset_on_fork;
-
-	printk(KERN_INFO "setscheduler called");
 
 	/* may grab non-irq protected spin_locks */
 	BUG_ON(in_interrupt());
