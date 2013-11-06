@@ -77,12 +77,12 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	//sme->task = p;
 	
 	// add the task to our runqueue - just one process for now
-	printk("pid inserted:%d \n",p->pid);
+	printk(KERN_INFO "enqueue_task_mycfs: pid inserted:%d \n",p->pid);
 	enqueue_entity(mycfs, sme);
 	
 	mycfs->nr_running++;
 	inc_nr_running(rq);
-	printk(KERN_INFO "enqueue_task_mycfs\n");
+	printk(KERN_INFO "enqueue_task_mycfs: end\n");
 }
 
 /*
@@ -109,7 +109,7 @@ static inline int entity_before(struct sched_mycfs_entity *a, struct sched_mycfs
 
 static void update_curr(struct mycfs_rq *mycfs_rq) {
 	struct sched_mycfs_entity *curr = mycfs_rq->curr;
-	u64 now = rq_of(mycfs_rq)->clock_task;
+		u64 now = container_of(mycfs_rq, struct rq, mycfs)->clock_task;
 	unsigned long delta_exec;
 
 	//How long this process has been running for
@@ -126,7 +126,7 @@ static void update_curr(struct mycfs_rq *mycfs_rq) {
 
 	curr->exec_start = now;
 
-	cfs_rq->runtime_remaining -= delta_exec;
+	mycfs_rq->runtime_remaining -= delta_exec;
 
 
 }
@@ -143,7 +143,6 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 	while(*link){
 		parent = *link;
 		entry = rb_entry(parent, struct sched_mycfs_entity, run_node);
-		sme->vruntime
 		//if(entity_before(sme,entry)){
 			link = &parent->rb_left;
 		//} else {
@@ -216,12 +215,14 @@ static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
 	struct sched_mycfs_entity *sme = &prev->sme;
 	struct mycfs_rq *mycfs = &rq->mycfs;
-	printk(KERN_INFO "put_prev_task_mycfs: on_rq[%d]\n", prev->on_rq);
+	printk(KERN_INFO "put_prev_task_mycfs: on_rq[%d]; pid[%d]\n", prev->on_rq, (int) prev->pid);
 	if(prev->on_rq){
 		dequeue_entity(mycfs, sme);
 	}
 	
-	enqueue_entity(mycfs, sme);
+	if(1){ // figure out why this is failing
+		enqueue_entity(mycfs, sme);
+	}
 
 	printk(KERN_INFO "put_prev_task_mycfs: after loop put_prev\n");
 	mycfs->curr = NULL;
