@@ -11,6 +11,7 @@
 #include "sched.h"
 
 // todo: include in header file
+void init_mycfs_rq(struct mycfs_rq *mycfs);
 static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags);
 static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags);
 static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *se);
@@ -76,8 +77,6 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	
 	// add the task to our runqueue - just one process for now
 	printk("pid inserted:%d \n",p->pid);
-	if(&mycfs->tasks_timeline == NULL)
-		init_mycfs_rq(mycfs);
 	enqueue_entity(mycfs, sme);
 	
 	// increment nr_running
@@ -123,7 +122,7 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 		}
 	}
 	//if(parent){
-		printk("before link");
+		printk("before link\n");
 		rb_link_node(&sme->run_node, parent, link);
 		printk("before insert\n");
 		rb_insert_color(&sme->run_node, &mycfs->tasks_timeline);
@@ -191,6 +190,7 @@ static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
 		enqueue_entity(mycfs, sme);
 	}
 	printk("after loop put_prev\n");
+	mycfs->curr = NULL;
 }
 
 static int select_task_rq_mycfs(struct task_struct *p, int sd_flag, int wake_flags){
@@ -198,11 +198,20 @@ static int select_task_rq_mycfs(struct task_struct *p, int sd_flag, int wake_fla
 	return task_cpu(p);
 }
 
+static void set_next_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sme)
+{
+	mycfs->curr = sme;
+}
+
 /*
 	This function is called when a task changes its scheduling class or changes
    	its task group.
 */
 static void set_curr_task_mycfs(struct rq *rq){
+	struct sched_mycfs_entity *sme = &rq->curr->sme;
+	struct mycfs_rq *mycfs = &rq->mycfs;
+
+	set_next_entity(mycfs, sme);
 	printk(KERN_INFO "set_curr_task_mycfs\n");
 }
 
