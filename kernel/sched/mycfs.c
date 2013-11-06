@@ -107,15 +107,43 @@ static inline int entity_before(struct sched_mycfs_entity *a, struct sched_mycfs
 	return (s64)(a->vruntime - b->vruntime) < 0;
 }
 
+static void update_curr(struct mycfs_rq *mycfs_rq) {
+	struct sched_mycfs_entity *curr = mycfs_rq->curr;
+	u64 now = rq_of(mycfs_rq)->clock_task;
+	unsigned long delta_exec;
+
+	//How long this process has been running for
+	delta_exec = (unsigned long)(now - curr->exec_start);
+	if (!delta_exec)
+		return;
+
+
+	//updating the vruntime
+	curr->sum_exec_runtime += delta_exec;
+	curr->vruntime += delta_exec;
+
+	//NOT SURE IF WE NEED TO UPDATE THE Min Vruntime	
+
+	curr->exec_start = now;
+
+	cfs_rq->runtime_remaining -= delta_exec;
+
+
+}
+
 static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sme)
 {
 	struct rb_node **link = &mycfs->tasks_timeline.rb_node;
 	struct rb_node *parent = NULL;
 	struct sched_mycfs_entity *entry;
 
+	//updates the vruntime stuff
+	update_curr(mycfs);
+
 	while(*link){
 		parent = *link;
 		entry = rb_entry(parent, struct sched_mycfs_entity, run_node);
+		sme->vruntime
 		//if(entity_before(sme,entry)){
 			link = &parent->rb_left;
 		//} else {
@@ -135,6 +163,7 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 static void dequeue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sme)
 {
 	printk(KERN_INFO "dequeue_entity:");
+	update_curr(mycfs);
 	rb_erase(&sme->run_node, &mycfs->tasks_timeline);
 }
 
