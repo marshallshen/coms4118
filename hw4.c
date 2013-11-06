@@ -1,45 +1,35 @@
-#include <unistd.h>
 #include <stdio.h>
+#include <sys/utsname.h>
 #include <sched.h>
-
-#define SCHED_MYCFS 6
+#include <sys/syscall.h>
 
 int main() {
-
-	struct sched_param param;
-	param.sched_priority = 0;
-
-	printf("pid: %d\n", (int) getpid());
-
-	/*
-	int pid;
-	if((pid = fork()) == 0){ // child
-		printf("child [%d]:\n", pid);
-		;
-	}else if(pid > 0){ // parent
-		printf("parent[%d]:\n", pid);
-		;
-	}else{	// error
-		perror("fork");
-		exit(0);
-	}
-	*/
-
-	int pid = (int) getpid();
-
-	int ret;
-	if((ret = sched_setscheduler(0, SCHED_MYCFS, &param)) == -1){
-		perror("sched_setscheduler");
-		return -1;
-	}
-
-	printf("[%d] sched_getscheduler: %d\n", pid, sched_getscheduler(0));
-
-	int i = 0;
-	while(++i < 1000){
-		printf("[%d] %d\n", pid, i);
-	}
-
-	exit(0);
-	return 0;
+    struct sched_param param;
+    param.sched_priority = 0;
+    pid_t pid = getpid();
+    printf("before setschedule 1, pid: %d", pid);
+    syscall(156, pid,6,&param);
+    int sch = -1;
+    //int sch = syscall(157,pid);
+    int number = 1;
+    int i;
+    printf("before first fork\n");
+    if(fork()==0){
+	pid = getpid();
+    	printf("before setschedule 2, pid: %d\n", pid);
+    	syscall(156, pid,6,&param);
+	number++;
+	if(fork()==0){
+		pid = getpid();
+    		printf("before setschedule 3, pid: %d\n", pid);
+    		printf("before setschedule 3\n");
+		syscall(156, pid, 6, &param);
+		number++;
+	}	
+    }
+    for(i = 0; i < 10;i++){
+    	printf("\nnumber %d, process: %d\n", number,pid);
+	wait(100);
+    }
+    return 0;
 }
