@@ -28,6 +28,12 @@ static unsigned int get_rr_interval_mycfs(struct rq *rq, struct task_struct *tas
 
 unsigned int sysctl_sched_latency_mycfs = 10000000ULL; // 10ms (in nanoseconds)
 
+void init_mycfs_rq(struct mycfs_rq *mycfs)
+{
+	mycfs->tasks_timeline = RB_ROOT;
+	mycfs->min_vruntime =(u64)(-(1LL << 20));
+}
+
 // see fair.c line 5538 for initialization of fair_sched_class
 const struct sched_class mycfs_sched_class;
 
@@ -65,12 +71,13 @@ const struct sched_class mycfs_sched_class = {
 static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	// get our runqueue
 	struct mycfs_rq *mycfs = &rq->mycfs;
-        struct sched_mycfs_entity *sme = &p->sme;	
+    struct sched_mycfs_entity *sme = &p->sme;	
 	//sme->task = p;
 	
-	printk("first entering enqueue\n");
 	// add the task to our runqueue - just one process for now
 	printk("pid inserted:%d \n",p->pid);
+	if(&mycfs->tasks_timeline == NULL)
+		init_mycfs_rq(mycfs);
 	enqueue_entity(mycfs, sme);
 	
 	// increment nr_running
@@ -115,8 +122,13 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 			link = &parent->rb_right;
 		}
 	}
-	rb_link_node(&sme->run_node, parent, link);
-	rb_insert_color(&sme->run_node, &mycfs->tasks_timeline);
+	//if(parent){
+		printk("before link");
+		rb_link_node(&sme->run_node, parent, link);
+		printk("before insert\n");
+		rb_insert_color(&sme->run_node, &mycfs->tasks_timeline);
+		printk("after insert node\n");
+	//}
 }
 
 
@@ -158,24 +170,26 @@ static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 	struct rb_node **link = &mycfs->tasks_timeline.rb_node;	
 	struct rb_node *parent = *link;
 	struct sched_mycfs_entity *sme = NULL;
+	//struct task_struct *p = NULL;
 	while(*link){
 		parent = *link;
 		link = &parent->rb_left;
 	}
+	if(!parent)
+		return NULL;
 	sme = rb_entry(parent, struct sched_mycfs_entity, run_node);
-	//return container_of(sme, struct task_struct, sme);
-	return NULL;
+	printk("before container of\n");	
+	return container_of(sme, struct task_struct, sme);
 }
 
 // do we need this - YES
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
-	//struct sched_mycfs_entity *sme = &prev->sme;
-	//struct mycfs_rq *mycfs = &rq->mycfs;
+	struct sched_mycfs_entity *sme = &prev->sme;
+	struct mycfs_rq *mycfs = &rq->mycfs;
 	printk(KERN_INFO "put_prev_task_mycfs\n");
-	//if(prev->on_rq){
-		printk("in loop prev\n");
-	//	enqueue_entity(mycfs, sme);
-	//}
+	if(prev->on_rq){
+		enqueue_entity(mycfs, sme);
+	}
 	printk("after loop put_prev\n");
 }
 

@@ -4239,11 +4239,8 @@ recheck:
 
 	if (running)
 		p->sched_class->set_curr_task(rq);
-	if (on_rq){
-		printk("\nbefore enqueue \n");
+	if (on_rq)
 		enqueue_task(rq, p, 0);
-		printk("\nafter enqueue \n");
-	}
 	check_class_changed(rq, p, prev_class, oldprio);
 	task_rq_unlock(rq, p, &flags);
 
