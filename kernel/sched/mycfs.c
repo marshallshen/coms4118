@@ -186,6 +186,12 @@ static void dequeue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 {
 	printk(KERN_INFO "dequeue_entity:");
 	update_curr(mycfs);
+	if (mycfs->rb_leftmost == &sme->run_node) {
+		struct rb_node *next_node;
+
+		next_node = rb_next(&sme->run_node);
+		mycfs->rb_leftmost = next_node;
+	}
 	printk(KERN_INFO "dequeue_entity: before erase\n");
 	rb_erase(&sme->run_node, &mycfs->tasks_timeline);
 	printk(KERN_INFO "dequeue_entity: after erase\n");
