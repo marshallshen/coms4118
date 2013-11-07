@@ -1243,6 +1243,7 @@ struct sched_mycfs_entity {
 	u64			vruntime;
 	u64			prev_sum_exec_runtime; // don't think we need to use this
 	u64			nr_migrations;
+	struct mycfs_rq		*mycfs;
 };
 
 struct sched_rt_entity {

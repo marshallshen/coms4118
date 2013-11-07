@@ -27,6 +27,7 @@ static void task_tick_mycfs(struct rq *rq, struct task_struct *curr, int queued)
 static void prio_changed_mycfs(struct rq *rq, struct task_struct *p, int oldprio);
 static void switched_to_mycfs(struct rq *rq, struct task_struct *p);
 static unsigned int get_rr_interval_mycfs(struct rq *rq, struct task_struct *task);
+static void task_fork_mycfs(struct task_struct *p);
 
 unsigned int sysctl_sched_latency_mycfs = 10000000ULL; // 10ms (in nanoseconds)
 
@@ -53,14 +54,14 @@ const struct sched_class mycfs_sched_class = {
 	.task_tick = task_tick_mycfs,
 	.prio_changed = prio_changed_mycfs,
 	.switched_to = switched_to_mycfs,
-	.get_rr_interval = get_rr_interval_mycfs
+	.get_rr_interval = get_rr_interval_mycfs,
 
 	// we don't need:
 	// .yield_to_task =
 	// .rq_online = N
 	// .rq_offline =  N
 	// .task_waking = ?
-	// .task_fork = yes
+	 .task_fork = task_fork_mycfs
 	// .switched_from = yes
 	// .task_move_group =
 
@@ -79,8 +80,10 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	
 	// add the task to our runqueue - just one process for now
 	printk(KERN_INFO "enqueue_task_mycfs: pid inserted:%d \n",p->pid);
-	if(!sme->on_rq && sme != mycfs->curr)
+	if(!sme->on_rq && sme != mycfs->curr){
 			enqueue_entity(mycfs, sme);
+			//sme->on_rq = 1;
+	}
 	
 	mycfs->nr_running++;
 	inc_nr_running(rq);
@@ -99,10 +102,10 @@ static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 
 	printk(KERN_INFO "dequeue_task_mycfs: start\n");
 
-	if(sme != mycfs->curr)
+	if(sme != mycfs->curr){
 		dequeue_entity(mycfs, sme);
-
-
+		//sme->on_rq = 0;
+	}
 	mycfs->nr_running--;
 	dec_nr_running(rq);
 	printk(KERN_INFO "dequeue_task_mycfs\n");
@@ -270,7 +273,7 @@ static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
 	struct sched_mycfs_entity *sme = &prev->sme;
 	struct mycfs_rq *mycfs = &rq->mycfs;
 	//printk(KERN_INFO "put_prev_task_mycfs: on_rq[%d]; pid[%d]\n", prev->on_rq, (int) prev->pid);
-	if(prev->on_rq){
+	if((&(prev->sme))->on_rq){
 		update_curr(mycfs);
 		//dequeue_entity(mycfs, sme);
 	}
@@ -343,6 +346,7 @@ static void switched_to_mycfs(struct rq *rq, struct task_struct *p){
 		return;
 	if (rq->curr == p)
 		resched_task(rq->curr);
+	p->sme.mycfs = &rq->mycfs;
 }
 
 static unsigned int get_rr_interval_mycfs(struct rq *rq, struct task_struct *task){
@@ -351,4 +355,34 @@ static unsigned int get_rr_interval_mycfs(struct rq *rq, struct task_struct *tas
 
 	printk(KERN_INFO "get_rr_interval_mycfs\n");
 	return sysctl_sched_latency_mycfs / mycfs->nr_running;
+}
+
+static void task_fork_mycfs(struct task_struct *p){
+	struct mycfs_rq *mycfs;
+	struct sched_mycfs_entity *sme = &p->sme, *curr;
+	int this_cpu = smp_processor_id();
+	struct rq *rq = this_rq();
+	unsigned long flags;
+
+
+	raw_spin_lock_irqsave(&rq->lock, flags);
+
+	update_rq_clock(rq);
+
+	if (unlikely(task_cpu(p) != this_cpu)) {
+		rcu_read_lock();
+		__set_task_cpu(p, this_cpu);
+		rcu_read_unlock();
+	}
+
+	mycfs = current->sme.mycfs;
+	curr = mycfs->curr;
+
+	update_curr(mycfs);
+
+	if (curr)
+		sme->vruntime = curr->vruntime;
+
+
+	raw_spin_unlock_irqrestore(&rq->lock, flags);
 }
