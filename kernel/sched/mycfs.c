@@ -18,6 +18,7 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *se
 static void dequeue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *se);
 static void yield_task_mycfs(struct rq *rq);
 static void check_preempt_curr_mycfs(struct rq *rq, struct task_struct *p, int wake_flags);
+static void set_next_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sme);
 static struct task_struct *pick_next_task_mycfs(struct rq *rq);
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev);
 static int select_task_rq_mycfs(struct task_struct *p, int sd_flag, int wake_flags);
@@ -78,7 +79,8 @@ static void enqueue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	
 	// add the task to our runqueue - just one process for now
 	printk(KERN_INFO "enqueue_task_mycfs: pid inserted:%d \n",p->pid);
-	enqueue_entity(mycfs, sme);
+	if(!sme->on_rq && sme != mycfs->curr)
+			enqueue_entity(mycfs, sme);
 	
 	mycfs->nr_running++;
 	inc_nr_running(rq);
@@ -96,8 +98,13 @@ static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	struct sched_mycfs_entity *sme = &p->sme;
 
 	printk(KERN_INFO "dequeue_task_mycfs: start\n");
-	dequeue_entity(mycfs, sme);
 
+	if(sme != mycfs->curr)
+		dequeue_entity(mycfs, sme);
+
+
+	mycfs->nr_running--;
+	dec_nr_running(rq);
 	printk(KERN_INFO "dequeue_task_mycfs\n");
 
 }
@@ -111,6 +118,14 @@ static void update_curr(struct mycfs_rq *mycfs) {
 	struct sched_mycfs_entity *curr = mycfs->curr;
 		u64 now = container_of(mycfs, struct rq, mycfs)->clock_task;
 	unsigned long delta_exec;
+
+
+	if(!curr){
+		printk("update_curr: not curr \n");
+		return;
+	}
+
+	printk("update_curr: now: %d\n ", (int)now);
 
 	//How long this process has been running for
 	delta_exec = (unsigned long)(now - curr->exec_start);
@@ -136,6 +151,7 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 	struct rb_node **link = &mycfs->tasks_timeline.rb_node;
 	struct rb_node *parent = NULL;
 	struct sched_mycfs_entity *entry;
+	int leftmost = 1;
 
 	//updates the vruntime stuff
 	update_curr(mycfs);
@@ -143,19 +159,25 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 	while(*link){
 		parent = *link;
 		entry = rb_entry(parent, struct sched_mycfs_entity, run_node);
-		//if(entity_before(sme,entry)){
+		if(entity_before(sme,entry)){
 			link = &parent->rb_left;
-		//} else {
-		//	link = &parent->rb_right;
-		//}
+		} else {
+			link = &parent->rb_right;
+			leftmost = 0;
+		}
 	}
-	//if(parent){
-		printk(KERN_INFO "enqueue_entity: before link\n");
-		rb_link_node(&sme->run_node, parent, link);
-		printk(KERN_INFO "enqueue_entity: before insert\n");
-		rb_insert_color(&sme->run_node, &mycfs->tasks_timeline); // BREAKS HERE:
-		printk(KERN_INFO "enqueue_entity: after insert node\n");
-	//}
+
+	if(leftmost)
+		mycfs->rb_leftmost = &sme->run_node;
+
+	printk(KERN_INFO "enqueue_entity: before link\n");
+	rb_link_node(&sme->run_node, parent, link);
+	printk(KERN_INFO "enqueue_entity: before insert\n");
+	rb_insert_color(&sme->run_node, &mycfs->tasks_timeline); // BREAKS HERE:
+	printk(KERN_INFO "enqueue_entity: after insert node\n");
+	
+	printk(KERN_INFO "enqueue_entity: out of curr loop\n");
+	sme->on_rq = 1;
 }
 
 
@@ -163,7 +185,10 @@ static void dequeue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 {
 	printk(KERN_INFO "dequeue_entity:");
 	update_curr(mycfs);
+	printk(KERN_INFO "dequeue_entity: before erase\n");
 	rb_erase(&sme->run_node, &mycfs->tasks_timeline);
+	printk(KERN_INFO "dequeue_entity: after erase\n");
+	sme->on_rq = 0;
 }
 
 /*
@@ -196,28 +221,49 @@ static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 */
 
 	struct mycfs_rq *mycfs = &rq->mycfs;
-	struct rb_node **link = &mycfs->tasks_timeline.rb_node;	
-	struct rb_node *parent = *link;
+	//struct rb_node **link = &mycfs->tasks_timeline.rb_node;	
+	//struct rb_node *parent = *link;
 	struct sched_mycfs_entity *sme = NULL;
+	struct task_struct *p = NULL;
 	//struct task_struct *p = NULL;
-	while(*link){
-		parent = *link;
-		link = &parent->rb_left;
-	}
-	if(!parent)
+	//while(*link){
+	//	parent = *link;
+	//	link = &parent->rb_left;
+	//}
+	/*
+	if(!parent){
 		return NULL;
-	sme = rb_entry(parent, struct sched_mycfs_entity, run_node);
-	printk(KERN_INFO "pick_next_task_mycfs: before container of\n");	
-	return container_of(sme, struct task_struct, sme);
+	}*/
+
+	struct rb_node *left = mycfs->rb_leftmost;
+
+
+	if (!mycfs->nr_running)
+		return NULL;
+
+	if (!left){
+		printk("pick_next_task_mycfs: no left\n");
+		return NULL;
+	}
+
+	sme = rb_entry(left, struct sched_mycfs_entity, run_node);
+
+	//sme = rb_entry(parent, struct sched_mycfs_entity, run_node);
+	printk(KERN_INFO "pick_next_task_mycfs: before container of\n");
+	set_next_entity(mycfs, sme);	
+	p = container_of(sme, struct task_struct, sme);
+	printk(KERN_INFO "pick_next_task_mycfs: after container of pid:%d\n", p->pid);
+	return p;
 }
 
 // do we need this - YES
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
 	struct sched_mycfs_entity *sme = &prev->sme;
 	struct mycfs_rq *mycfs = &rq->mycfs;
-	printk(KERN_INFO "put_prev_task_mycfs: on_rq[%d]; pid[%d]\n", prev->on_rq, (int) prev->pid);
+	//printk(KERN_INFO "put_prev_task_mycfs: on_rq[%d]; pid[%d]\n", prev->on_rq, (int) prev->pid);
 	if(prev->on_rq){
-		dequeue_entity(mycfs, sme);
+		update_curr(mycfs);
+		//dequeue_entity(mycfs, sme);
 	}
 	
 	if(1){ // figure out why this is failing
@@ -235,6 +281,9 @@ static int select_task_rq_mycfs(struct task_struct *p, int sd_flag, int wake_fla
 
 static void set_next_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sme)
 {
+	if(sme->on_rq){
+		dequeue_entity(mycfs, sme);
+	}
 	mycfs->curr = sme;
 }
 
