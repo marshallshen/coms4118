@@ -312,8 +312,24 @@ static void set_curr_task_mycfs(struct rq *rq){
 	This function is mostly called from time tick functions; it might lead to
    	process switch.  This drives the running preemption.
 */
-static void task_tick_mycfs(struct rq *rq, struct task_struct *curr, int queued){
+static void task_tick_mycfs(struct rq *rq, struct task_struct *curr, int queued){	
+	struct mycfs_rq *mycfs;
+	struct sched_mycfs_entity *sme = &curr->sme;
+	struct rq *temprq;
+	struct task_struct *p;
+
+	//mycfs = cfs_rq_of(sme);
+
 	printk(KERN_INFO "task_tick_mycfs\n");
+	
+
+	p = container_of(sme, struct task_struct, sme);
+	temprq = task_rq(p);
+
+	mycfs = &temprq->mycfs;
+
+
+	update_curr(mycfs);
 }
 
 
