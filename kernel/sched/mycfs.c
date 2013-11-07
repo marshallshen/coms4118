@@ -173,6 +173,7 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 	printk(KERN_INFO "enqueue_entity: before link\n");
 	rb_link_node(&sme->run_node, parent, link);
 	printk(KERN_INFO "enqueue_entity: before insert\n");
+	printk(KERN_INFO "enqueue entity: printing parent pointer %p\nprinting the fucking SME pointer: %p\nenqueue entity: printing the fucking run_node pointer: %p\nenqueue entity: printing the fucking tasks_timeline pointer: %p\n", parent, sme, &sme->run_node, &mycfs->tasks_timeline);
 	rb_insert_color(&sme->run_node, &mycfs->tasks_timeline); // BREAKS HERE:
 	printk(KERN_INFO "enqueue_entity: after insert node\n");
 	
@@ -197,7 +198,9 @@ static void dequeue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
    	entity at the right-most end of the red-black tree.
 */
 static void yield_task_mycfs(struct rq *rq){
+	struct mycfs_rq *mycfs = &rq->mycfs;
 	printk(KERN_INFO "yield_task_mycfs\n");
+	update_curr(mycfs);
 }
 
 /*
