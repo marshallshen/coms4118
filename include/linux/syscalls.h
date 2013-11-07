@@ -857,6 +857,6 @@ asmlinkage long sys_process_vm_writev(pid_t pid,
 				      const struct iovec __user *rvec,
 				      unsigned long riovcnt,
 				      unsigned long flags);
-asmlinkage int sys_fail(int N);
+asmlinkage int sys_sched_setlimit(pid_t pid, int limit);
 
 #endif
