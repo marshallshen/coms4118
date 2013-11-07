@@ -98,8 +98,13 @@ static void dequeue_task_mycfs(struct rq *rq, struct task_struct *p, int flags){
 	struct sched_mycfs_entity *sme = &p->sme;
 
 	printk(KERN_INFO "dequeue_task_mycfs: start\n");
-	dequeue_entity(mycfs, sme);
 
+	if(sme != mycfs->curr)
+		dequeue_entity(mycfs, sme);
+
+
+	mycfs->nr_running--;
+	dec_nr_running(rq);
 	printk(KERN_INFO "dequeue_task_mycfs\n");
 
 }
@@ -158,7 +163,7 @@ static void enqueue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 			link = &parent->rb_left;
 		} else {
 			link = &parent->rb_right;
-			//leftmost = 0;
+			leftmost = 0;
 		}
 	}
 
@@ -180,10 +185,9 @@ static void dequeue_entity(struct mycfs_rq *mycfs, struct sched_mycfs_entity *sm
 {
 	printk(KERN_INFO "dequeue_entity:");
 	update_curr(mycfs);
-
-	if(sme != mycfs->curr){
-		rb_erase(&sme->run_node, &mycfs->tasks_timeline);
-	}
+	printk(KERN_INFO "dequeue_entity: before erase\n");
+	rb_erase(&sme->run_node, &mycfs->tasks_timeline);
+	printk(KERN_INFO "dequeue_entity: after erase\n");
 	sme->on_rq = 0;
 }
 
@@ -220,6 +224,7 @@ static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 	//struct rb_node **link = &mycfs->tasks_timeline.rb_node;	
 	//struct rb_node *parent = *link;
 	struct sched_mycfs_entity *sme = NULL;
+	struct task_struct *p = NULL;
 	//struct task_struct *p = NULL;
 	//while(*link){
 	//	parent = *link;
@@ -246,14 +251,16 @@ static struct task_struct *pick_next_task_mycfs(struct rq *rq){
 	//sme = rb_entry(parent, struct sched_mycfs_entity, run_node);
 	printk(KERN_INFO "pick_next_task_mycfs: before container of\n");
 	set_next_entity(mycfs, sme);	
-	return container_of(sme, struct task_struct, sme);
+	p = container_of(sme, struct task_struct, sme);
+	printk(KERN_INFO "pick_next_task_mycfs: after container of pid:%d\n", p->pid);
+	return p;
 }
 
 // do we need this - YES
 static void put_prev_task_mycfs(struct rq *rq, struct task_struct *prev){
 	struct sched_mycfs_entity *sme = &prev->sme;
 	struct mycfs_rq *mycfs = &rq->mycfs;
-	printk(KERN_INFO "put_prev_task_mycfs: on_rq[%d]; pid[%d]\n", prev->on_rq, (int) prev->pid);
+	//printk(KERN_INFO "put_prev_task_mycfs: on_rq[%d]; pid[%d]\n", prev->on_rq, (int) prev->pid);
 	if(prev->on_rq){
 		update_curr(mycfs);
 		//dequeue_entity(mycfs, sme);
