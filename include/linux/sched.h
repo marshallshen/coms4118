@@ -736,6 +736,8 @@ struct user_struct {
 #ifdef CONFIG_PERF_EVENTS
 	atomic_long_t locked_vm;
 #endif
+
+	long mem_max; /* maximum amount of physical memory the user can user, in bytes */
 };
 
 extern int uids_sysfs_init(void);
