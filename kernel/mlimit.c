@@ -12,11 +12,15 @@ asmlinkage int sys_set_mlimit(uid_t uid, long mem_max){
 		return (-EINVAL);
 
 	// get struct user_struct corresponding to uid
-	if((usr = find_user(uid)) == NULL)
+	if((usr = find_user(uid)) == NULL){
+		printk(KERN_ERR "sys_set_mlimit: user_struct not found");
 		return (-EINVAL);	
+	}
 
 	// set that value of mem_max
 	usr->mem_max = mem_max;	
+
+	printk(KERN_INFO "sys_set_mlimit: return");
 
 	return 0;
 }
