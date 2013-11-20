@@ -184,6 +184,7 @@ unsigned int oom_badness(struct task_struct *p, struct mem_cgroup *memcg,
 		      const nodemask_t *nodemask, unsigned long totalpages)
 {
 	long points;
+	struct user_struct *curr_user;
 
 	if (oom_unkillable_task(p, memcg, nodemask))
 		return 0;
@@ -197,37 +198,57 @@ unsigned int oom_badness(struct task_struct *p, struct mem_cgroup *memcg,
 		return 0;
 	}
 
-	/*
-	 * The memory controller may have a limit of 0 bytes, so avoid a divide
-	 * by zero, if necessary.
-	 */
-	if (!totalpages)
-		totalpages = 1;
+	// get current user so we can access mem_max
+	curr_user = find_user(p->real_cred->uid);
 
-	/*
-	 * The baseline for the badness score is the proportion of RAM that each
-	 * task's rss, pagetable and swap space use.
-	 */
-	points = get_mm_rss(p->mm) + p->mm->nr_ptes;
-	points += get_mm_counter(p->mm, MM_SWAPENTS);
+	// if mem_max is not set, do original; else run modified
+	if(curr_user->mem_max < 0){
 
-	points *= 1000;
-	points /= totalpages;
-	task_unlock(p);
+		// Begin original oom_badness algorithm
 
-	/*
-	 * Root processes get 3% bonus, just like the __vm_enough_memory()
-	 * implementation used by LSMs.
-	 */
-	if (has_capability_noaudit(p, CAP_SYS_ADMIN))
-		points -= 30;
+		/* 
+		 * The memory controller may have a limit of 0 bytes, so avoid a divide
+		 * by zero, if necessary.
+		 */
+		if (!totalpages)
+			totalpages = 1;
 
-	/*
-	 * /proc/pid/oom_score_adj ranges from -1000 to +1000 such that it may
-	 * either completely disable oom killing or always prefer a certain
-	 * task.
-	 */
-	points += p->signal->oom_score_adj;
+		/*
+		 * The baseline for the badness score is the proportion of RAM that each
+		 * task's rss, pagetable and swap space use.
+		 */
+		points = get_mm_rss(p->mm) + p->mm->nr_ptes;
+		points += get_mm_counter(p->mm, MM_SWAPENTS);
+
+		points *= 1000;
+		points /= totalpages;
+		task_unlock(p);
+
+		/*
+		 * Root processes get 3% bonus, just like the __vm_enough_memory()
+		 * implementation used by LSMs.
+		 */
+		if (has_capability_noaudit(p, CAP_SYS_ADMIN))
+			points -= 30;
+
+		/*
+		 * /proc/pid/oom_score_adj ranges from -1000 to +1000 such that it may
+		 * either completely disable oom killing or always prefer a certain
+		 * task.
+		 */
+		points += p->signal->oom_score_adj;
+
+		// End original oom_badness algorithm
+
+		if(points == 1000)
+			points--; // don't let points = 1000
+
+	}else{
+
+		points = 1000; // if process' mem_max is set, set points to 1000
+
+	}	
+
 
 	/*
 	 * Never return 0 for an eligible task that may be killed since it's
@@ -314,6 +335,11 @@ static struct task_struct *select_bad_process(unsigned int *ppoints,
 {
 	struct task_struct *g, *p;
 	struct task_struct *chosen = NULL;
+
+	unsigned long rss_max = 0;
+	// figure out whether mem_max has been set for this user
+	int is_mem_max = find_user(get_current()->real_cred->uid)->mem_max == -1 ? 0 : 1;
+	
 	*ppoints = 0;
 
 	do_each_thread(g, p) {
@@ -367,9 +393,20 @@ static struct task_struct *select_bad_process(unsigned int *ppoints,
 		}
 
 		points = oom_badness(p, memcg, nodemask, totalpages);
-		if (points > *ppoints) {
-			chosen = p;
-			*ppoints = points;
+
+		if (!is_mem_max){
+			if (points > *ppoints) {
+				chosen = p;
+				*ppoints = points;
+			}
+		}else{
+			if (points == 1000) { // the task belongs to the user
+				unsigned long rss = get_mm_rss(p->mm);
+				if (rss > rss_max) {
+					chosen = p;
+					rss_max = rss;
+				}
+			}
 		}
 	} while_each_thread(g, p);
 
