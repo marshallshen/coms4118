@@ -240,12 +240,14 @@ unsigned int oom_badness(struct task_struct *p, struct mem_cgroup *memcg,
 
 		// End original oom_badness algorithm
 
-		if(points == 1000)
-			points--; // don't let points = 1000
+		if(points >= 1000)
+			points = 999; // don't let points = 1000
 
 	}else{
 
+		task_unlock(p);
 		points = 1000; // if process' mem_max is set, set points to 1000
+		printk(KERN_INFO "oom_badness: usr[%d] points[%d] pid[%d]", (int) curr_user->uid, (int) points, (int) p->pid);
 
 	}	
 
@@ -410,6 +412,8 @@ static struct task_struct *select_bad_process(unsigned int *ppoints,
 		}
 	} while_each_thread(g, p);
 
+	printk(KERN_INFO "select_bad_process: return [%d] usr[%d]", (int) chosen->pid, (int) chosen->real_cred->uid);
+
 	return chosen;
 }
 
@@ -520,6 +524,8 @@ static void oom_kill_process(struct task_struct *p, gfp_t gfp_mask, int order,
 			 */
 			child_points = oom_badness(child, memcg, nodemask,
 								totalpages);
+
+			printk(KERN_INFO "oom_kill_process: pid[%d] child_points[%d]", (int) child->pid, (int) child_points);
 			if (child_points > victim_points) {
 				victim = child;
 				victim_points = child_points;
@@ -780,6 +786,9 @@ void out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 
 	p = select_bad_process(&points, totalpages, NULL, mpol_mask,
 			       force_kill);
+
+	printk(KERN_INFO "out_of_memory: to_kill[%d] current[%d] PTR_ERR[%lu] -1UL[%lu]", p->pid, current->pid, PTR_ERR(p), -1UL);
+
 	/* Found nothing?!?! Either we hang forever, or we panic. */
 	if (!p) {
 		dump_header(NULL, gfp_mask, order, NULL, mpol_mask);
@@ -789,6 +798,7 @@ void out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 	if (PTR_ERR(p) != -1UL) {
 		oom_kill_process(p, gfp_mask, order, points, totalpages, NULL,
 				 nodemask, "Out of memory");
+		printk(KERN_INFO "out_of_memory: process killed");
 		killed = 1;
 	}
 out:
@@ -800,6 +810,8 @@ out:
 	 */
 	if (killed && !test_thread_flag(TIF_MEMDIE))
 		schedule_timeout_uninterruptible(1);
+
+	printk(KERN_INFO "out_of_memory: return");
 }
 
 /*

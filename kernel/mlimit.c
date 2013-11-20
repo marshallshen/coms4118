@@ -22,7 +22,9 @@ asmlinkage int sys_set_mlimit(uid_t uid, long mem_max){
 	}
 
 	// set that value of mem_max
+	printk(KERN_INFO "sys_set_mlimit: mem_max[%d]", (int) usr->mem_max);
 	usr->mem_max = mem_max;	
+	printk(KERN_INFO "sys_set_mlimit: mem_max[%d] after set", (int) usr->mem_max);
 
 	//Look through every process and try to find which processes have the same user id as the one given	
 	for_each_process(g) {
@@ -38,7 +40,7 @@ asmlinkage int sys_set_mlimit(uid_t uid, long mem_max){
 		}
 	}	
 
-	printk(KERN_INFO "sys_set_mlimit: return");
+	printk(KERN_INFO "sys_set_mlimit: return\n");
 
 	return 0;
 }
