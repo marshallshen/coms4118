@@ -59,6 +59,7 @@ struct user_struct root_user = {
 	.sigpending	= ATOMIC_INIT(0),
 	.locked_shm     = 0,
 	.user_ns	= &init_user_ns,
+	.mem_max	= -1,
 };
 
 /*
@@ -152,6 +153,7 @@ struct user_struct *alloc_uid(struct user_namespace *ns, uid_t uid)
 
 		new->uid = uid;
 		atomic_set(&new->__count, 1);
+		&new->mem_max = -1;
 
 		new->user_ns = get_user_ns(ns);
 
