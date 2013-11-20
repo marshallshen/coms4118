@@ -789,7 +789,6 @@ void out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 	p = select_bad_process(&points, totalpages, NULL, mpol_mask,
 			       force_kill);
 
-	printk(KERN_INFO "out_of_memory: to_kill[%d] current[%d] PTR_ERR[%lu] -1UL[%lu]", p->pid, current->pid, PTR_ERR(p), -1UL);
 
 	/* Found nothing?!?! Either we hang forever, or we panic. */
 	if (!p) {
