@@ -2553,10 +2553,10 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 	struct task_struct *p;
 	uid_t uid;        
 	struct mm_struct *temp_mm;
-    int temp_rss_val;
-    struct user_struct *usr;
+    	int temp_rss_val;
+    	struct user_struct *usr;
 	int curr_rss = 0;
-
+	struct task_struct *g;
 
 	gfp_mask &= gfp_allowed_mask;
 
@@ -2596,20 +2596,24 @@ retry_cpuset:
 	usr = find_user(uid);
 	
 	if(usr && usr->mem_max > -1){
-		for_each_process(p){
-			const struct cred *real = p->real_cred;
-			printk("alloc_pages_nodemask: In each process loop\n");
+		for_each_process(g){
+			const struct cred *real = g->real_cred;
+	//		printk("alloc_pages_nodemask: In each process loop\n");
 			if(real->uid == uid){
-				printk("alloc_pages_nodemask: after uid == uid check\n");
-				temp_mm = p->mm;
-				temp_rss_val = get_mm_rss(temp_mm);
-				curr_rss += temp_rss_val;
+	//			printk("alloc_pages_nodemask: after uid == uid check\n");
+				temp_mm = g->mm;
+				if(temp_mm) {
+					temp_rss_val = get_mm_rss(temp_mm);
+					curr_rss += temp_rss_val;
+				}
 			}
 		}
-		printk("alloc_pages_nodemask: mem_max: %d\n", (int)usr->mem_max);
+	//	printk("alloc_pages_nodemask: mem_max: %d\n", (int)usr->mem_max);
 		if(curr_rss * 4096 > usr->mem_max){
-			printk("alloc_pages_nodemask: Calling out of memory\n");
-		//	out_of_memory(zonelist, gfp_mask, order, nodemask, false);
+			printk("alloc_pages_nodemask: num procs:%d\n", atomic_read(&usr->processes));
+			printk("alloc_pages_nodemask: uid:%d pid:%d \n", (int)uid, (int)p->pid);
+			out_of_memory(zonelist, gfp_mask, order, nodemask, false);
+			printk("alloc_pages_nodemask: gets back alright\n");
 		}
 	}
 
