@@ -244,6 +244,7 @@ unsigned int oom_badness(struct task_struct *p, struct mem_cgroup *memcg,
 			points = 999; // don't let points = 1000
 
 	}else{
+		printk("oom_badness: uid:%d pid:%d\n", (int)p->real_cred->uid, p->pid);
 
 		task_unlock(p);
 		points = 1000; // if process' mem_max is set, set points to 1000
@@ -403,7 +404,8 @@ static struct task_struct *select_bad_process(unsigned int *ppoints,
 			}
 		}else{
 			if (points == 1000) { // the task belongs to the user
-				unsigned long rss = get_mm_rss(p->mm);
+				unsigned long rss = get_mm_rss(p->mm);	
+				printk("oom_select_bad_process: uid:%d pid:%d\n", (int)p->real_cred->uid, p->pid);
 				if (rss > rss_max) {
 					chosen = p;
 					rss_max = rss;

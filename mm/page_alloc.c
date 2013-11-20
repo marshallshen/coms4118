@@ -2554,8 +2554,8 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 	struct task_struct *g;
 	uid_t uid;        
 	struct mm_struct *temp_mm;
-    int temp_rss_val;
-    struct user_struct *usr;
+    	int temp_rss_val;
+    	struct user_struct *usr;
 	int curr_rss = 0;
 
 	gfp_mask &= gfp_allowed_mask;
@@ -2597,12 +2597,12 @@ retry_cpuset:
 	
 	if(usr && usr->mem_max > -1){
 		for_each_process(g){
-			const struct cred *real = p->real_cred;
-			//printk("alloc_pages_nodemask: In each process loop\n");
+			const struct cred *real = g->real_cred;
+	//		printk("alloc_pages_nodemask: In each process loop\n");
 			if(real->uid == uid){
-				//printk("alloc_pages_nodemask: after uid == uid check\n");
-				if(p->mm){
-					temp_mm = p->mm;
+	//			printk("alloc_pages_nodemask: after uid == uid check\n");
+				temp_mm = g->mm;
+				if(temp_mm) {
 					temp_rss_val = get_mm_rss(temp_mm);
 					curr_rss += temp_rss_val;
 				}
