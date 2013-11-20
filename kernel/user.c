@@ -153,7 +153,7 @@ struct user_struct *alloc_uid(struct user_namespace *ns, uid_t uid)
 
 		new->uid = uid;
 		atomic_set(&new->__count, 1);
-		&new->mem_max = -1;
+		new->mem_max = -1;
 
 		new->user_ns = get_user_ns(ns);
 
