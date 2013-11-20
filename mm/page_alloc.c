@@ -59,6 +59,7 @@
 #include <linux/prefetch.h>
 #include <linux/migrate.h>
 #include <linux/page-debug-flags.h>
+#include <linux/sched.h>
 
 #include <asm/tlbflush.h>
 #include <asm/div64.h>
@@ -2549,6 +2550,13 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 	int migratetype = allocflags_to_migratetype(gfp_mask);
 	unsigned int cpuset_mems_cookie;
 	int alloc_flags = ALLOC_WMARK_LOW|ALLOC_CPUSET;
+	struct task_struct *p;
+	uid_t uid;        
+	struct mm_struct *temp_mm;
+    int temp_rss_val;
+    struct user_struct *usr;
+	int curr_rss = 0;
+
 
 	gfp_mask &= gfp_allowed_mask;
 
@@ -2581,6 +2589,31 @@ retry_cpuset:
 	if (allocflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE)
 		alloc_flags |= ALLOC_CMA;
 #endif
+
+	p = get_current();
+	uid = p->cred->uid;
+
+	usr = find_user(uid);
+	
+	if(usr && usr->mem_max > -1){
+		for_each_process(p){
+			const struct cred *real = p->real_cred;
+			printk("alloc_pages_nodemask: In each process loop\n");
+			if(real->uid == uid){
+				printk("alloc_pages_nodemask: after uid == uid check\n");
+				temp_mm = p->mm;
+				temp_rss_val = get_mm_rss(temp_mm);
+				curr_rss += temp_rss_val;
+			}
+		}
+		printk("alloc_pages_nodemask: mem_max: %d\n", (int)usr->mem_max);
+		if(curr_rss * 4096 > usr->mem_max){
+			printk("alloc_pages_nodemask: Calling out of memory\n");
+		//	out_of_memory(zonelist, gfp_mask, order, nodemask, false);
+		}
+	}
+
+
 	/* First allocation attempt */
 	page = get_page_from_freelist(gfp_mask|__GFP_HARDWALL, nodemask, order,
 			zonelist, high_zoneidx, alloc_flags,
