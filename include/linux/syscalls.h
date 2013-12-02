@@ -857,5 +857,7 @@ asmlinkage long sys_process_vm_writev(pid_t pid,
 				      const struct iovec __user *rvec,
 				      unsigned long riovcnt,
 				      unsigned long flags);
+asmlinkage int sys_ext4_cowcopy(const char __user *src,
+				const char __user *dest);
 
 #endif
