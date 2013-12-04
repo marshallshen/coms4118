@@ -166,6 +166,8 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 	struct vfsmount *mnt = filp->f_path.mnt;
 	struct path path;
 	char buf[64], *cp;
+	int cc_xattr_result;
+	int cc_value = -1;
 
 	if (unlikely(!(sbi->s_mount_flags & EXT4_MF_MNTDIR_SAMPLED) &&
 		     !(sb->s_flags & MS_RDONLY))) {
@@ -184,6 +186,18 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 			strlcpy(sbi->s_es->s_last_mounted, cp,
 				sizeof(sbi->s_es->s_last_mounted));
 			ext4_mark_super_dirty(sb);
+		}
+	}
+
+	if((filp->f_mode & FMODE_WRITE)){
+		//get xattr for cowcopy
+		cc_xattr_result = ext4_xattr_get(inode, 0, "cowcopy", &cc_value, sizeof(cc_value));
+		printk(KERN_INFO "cowcopy xattr check: %d\n", cc_xattr_result);
+		if(cc_xattr_result == 0){
+			printk(KERN_INFO "cowcopy source file\n");
+		}
+		else if(cc_xattr_result == 1){
+			printk(KERN_INFO "cowcopy destination file\n");
 		}
 	}
 	/*
