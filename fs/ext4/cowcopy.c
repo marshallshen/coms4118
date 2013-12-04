@@ -5,6 +5,7 @@
 #include <linux/stat.h>
 #include <linux/string.h>
 #include <linux/mount.h>
+#include <linux/atomic.h>
 
 
 asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest){
@@ -86,6 +87,9 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 
 	if((c_d = d_alloc(d_d, &s_d->d_name)) == NULL)
 		return -1;
+
+	printk(KERN_INFO "sys_ext4_cowcopy: i_count[%d]", (int) atomic_read(&s_i->i_count));
+	atomic_add(1, &s_i->i_count);
 
 	printk(KERN_INFO "sys_ext4_cowcopy: d_alloc'd new dentry");
 	d_instantiate(c_d, s_i);	// set the inode of our new dentry to that of src
