@@ -4,6 +4,7 @@
 #include <linux/dcache.h>
 #include <linux/stat.h>
 #include <linux/string.h>
+#include <linux/mount.h>
 
 
 asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest){
@@ -25,6 +26,7 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 	struct vfsmount *d_mnt;
 	struct inode *d_i;
 
+	//Getting things for the src
 	kern_path(src, LOOKUP_FOLLOW, &s_p);
 	s_d = s_p.dentry;
 	s_mnt = s_p.mnt;
@@ -34,17 +36,24 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 		s_type = s_sb->s_type;
 		s_fsName = s_type->name;
 		printk(KERN_INFO "COWS: fsName: %s\n", s_fsName);
-	}
+		printk(KERN_INFO "COWS: fslen: %d\n", strlen(s_fsName));
+	} else
+		return -EINVAL; //Temporary return statement
+
 	printk(KERN_INFO "COWS: src: %s\n", src);
 	printk(KERN_INFO "COWS: dest: %s\n", dest);
 	
+	//Getting things for the destination folder
 	kern_path(dest, LOOKUP_FOLLOW, &d_p);
 	d_d = d_p.dentry;
 	d_mnt = d_p.mnt;
 	if(d_d) {
 		d_i = d_d->d_inode;
-	}
+	} else
+		return -EINVAL; //Temporary return statement
+		
 
+	
 	//Checking if the file is actually a file and not a directory
 	if(S_ISDIR(s_i->i_mode)) {
 		printk(KERN_INFO "COWS: directory bitch\n");
@@ -52,11 +61,16 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 	}
 
 	//Checking if the file is in the ext4 file system
-	if(!strncmp(s_fsName, "ext4", 4)) {
+	if(!strncmp(s_fsName, "ext4", 5)) {
 		printk(KERN_INFO "COWS: not ext4 bitch\n");
 		return -EOPNOTSUPP;
 	}
 	
+	//Checking if theyre in the same mount point
+	if(s_mnt->mnt_root != d_mnt->mnt_root) {
+		printk(KERN_INFO "COWS: not same device bitch\n");
+		return -EXDEV;
+	}
 	
 	
 	printk(KERN_INFO "sys_ext4_cowcopy: success");
