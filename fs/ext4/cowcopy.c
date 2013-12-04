@@ -9,6 +9,7 @@
 
 asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest){
 	
+	char *ext = "ext4";
 	//Checking if the path is a directory of not.
 
 	//For the src
@@ -53,15 +54,15 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 		return -EINVAL; //Temporary return statement
 		
 
-	
 	//Checking if the file is actually a file and not a directory
 	if(S_ISDIR(s_i->i_mode)) {
 		printk(KERN_INFO "COWS: directory bitch\n");
 		return -EPERM;
 	}
 
+	
 	//Checking if the file is in the ext4 file system
-	if(!strncmp(s_fsName, "ext4", 5)) {
+	if(strncmp(s_fsName, ext, 4)) {
 		printk(KERN_INFO "COWS: not ext4 bitch\n");
 		return -EOPNOTSUPP;
 	}
