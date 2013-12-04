@@ -27,7 +27,10 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 	struct vfsmount *d_mnt;
 	struct inode *d_i;
 
-	//Getting things for the src
+	//for new copy
+	struct dentry *c_d;
+
+	//getting things for the src
 	kern_path(src, LOOKUP_FOLLOW, &s_p);
 	s_d = s_p.dentry;
 	s_mnt = s_p.mnt;
@@ -66,13 +69,29 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 		printk(KERN_INFO "COWS: not ext4 bitch\n");
 		return -EOPNOTSUPP;
 	}
-	
+
 	//Checking if theyre in the same mount point
 	if(s_mnt->mnt_root != d_mnt->mnt_root) {
 		printk(KERN_INFO "COWS: not same device bitch\n");
 		return -EXDEV;
 	}
-	
+
+	// ======================
+	// End checks
+	// ======================
+
+	// create dentry, set parent dentry to dest
+	printk(KERN_INFO "sys_ext4_cowcopy: qstr[%p] name[%s]", &s_d->d_name, s_d->d_name.name);
+	printk(KERN_INFO "sys_ext4_cowcopy: parent[%p] superblock[%p]", d_d, d_d->d_sb);
+
+	if((c_d = d_alloc(d_d, &s_d->d_name)) == NULL)
+		return -1;
+
+	printk(KERN_INFO "sys_ext4_cowcopy: d_alloc'd new dentry");
+	d_instantiate(c_d, s_i);	// set the inode of our new dentry to that of src
+
+	// change permissions of both to read only - save permissions?
+	// update type, so we know that the file is cow or not
 	
 	printk(KERN_INFO "sys_ext4_cowcopy: success");
 	return 0;
