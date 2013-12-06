@@ -193,10 +193,10 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 		//get xattr for cowcopy
 		cc_xattr_result = ext4_xattr_get(inode, 0, "cowcopy", &cc_value, sizeof(cc_value));
 		printk(KERN_INFO "cowcopy xattr check: %d\n", cc_xattr_result);
-		if(cc_xattr_result == 0){
+		if(cc_value == 0){
 			printk(KERN_INFO "cowcopy source file\n");
 		}
-		else if(cc_xattr_result == 1){
+		else if(cc_value == 1){
 			printk(KERN_INFO "cowcopy destination file\n");
 		}
 	}

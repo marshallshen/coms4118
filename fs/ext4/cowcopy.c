@@ -6,6 +6,7 @@
 #include <linux/string.h>
 #include <linux/mount.h>
 #include <linux/atomic.h>
+#include "ext4.h"
 #include "ext4_jbd2.h"
 #include "xattr.h"
 
@@ -102,7 +103,7 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 
 	printk(KERN_INFO "sys_ext4_cowcopy: d_alloc'd new dentry");
 	d_instantiate(c_d, s_i);	// set the inode of our new dentry to that of src
-
+	ext4_dir_inode_operations.link(s_d, d_i, c_d);
 	// change permissions of both to read only - save permissions?
 	// update type, so we know that the file is cow or not
 	printk(KERN_INFO "sys_ext4_cowcopy: success");

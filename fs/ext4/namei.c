@@ -2370,7 +2370,9 @@ retry:
 	err = ext4_add_entry(handle, dentry, inode);
 	if (!err) {
 		ext4_mark_inode_dirty(handle, inode);
+		printk(KERN_INFO "before instant\n");
 		d_instantiate(dentry, inode);
+		printk(KERN_INFO "after instant\n");
 	} else {
 		drop_nlink(inode);
 		iput(inode);
