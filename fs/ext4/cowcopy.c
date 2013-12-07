@@ -34,8 +34,7 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 	struct dentry *c_d;
 
 
-	int cc_value_s = 0;
-	int cc_value_d = 1;
+	int cc_value = 0;
 	int cc_xattr_result = -1;
 	int cc_xattr_result_d = -1;
 	int cc_success;
@@ -48,6 +47,7 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 	if(s_d) {
 		s_i = s_d->d_inode;
 		s_sb = s_i->i_sb;
+		printk(KERN_INFO "before s_type");
 		s_type = s_sb->s_type;
 		s_fsName = s_type->name;
 		printk(KERN_INFO "COWS: fsName: %s\n", s_fsName);
@@ -102,17 +102,16 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 	atomic_add(1, &s_i->i_count);
 
 	printk(KERN_INFO "sys_ext4_cowcopy: d_alloc'd new dentry");
-	//d_instantiate(c_d, s_i);	// set the inode of our new dentry to that of src
 	ext4_dir_inode_operations.link(s_d, d_i, c_d);
 	// change permissions of both to read only - save permissions?
 	// update type, so we know that the file is cow or not
 	printk(KERN_INFO "sys_ext4_cowcopy: success");
 	
 	//testing xattr
-	cc_success = ext4_xattr_set(s_i, 0, "cowcopy", &cc_value_s, sizeof(cc_value_s), 0);
-	cc_xattr_result = ext4_xattr_get(s_i, 0, "cowcopy", &cc_value_s, sizeof(cc_value_s));
-	cc_xattr_result_d = ext4_xattr_set(d_i, 0, "cowcopy", &cc_value_d, sizeof(cc_value_d), 0);
-	printk(KERN_INFO "xattr_test success: %d cowcopy: %d length: %d\n ", cc_success, cc_value_s,cc_xattr_result);
+	cc_success = ext4_xattr_set(s_i, 0, "cowcopy", &cc_value, sizeof(cc_value), 0);
+	cc_xattr_result = ext4_xattr_get(s_i, 0, "cowcopy", &cc_value, sizeof(cc_value));
+	cc_xattr_result_d = ext4_xattr_set(d_i, 0, "cowcopy", &cc_value, sizeof(cc_value), 0);
+	printk(KERN_INFO "xattr_test success: %d cowcopy: %d length: %d\n ", cc_success, cc_value,cc_xattr_result);
 	
 	return 0;
 }

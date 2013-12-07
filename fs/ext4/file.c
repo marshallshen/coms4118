@@ -168,6 +168,9 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 	char buf[64], *cp;
 	int cc_xattr_result;
 	int cc_value = -1;
+	struct dentry *orig_dentry;
+	//int cc_completed = 2;
+	//struct inode *c_i;
 
 	if (unlikely(!(sbi->s_mount_flags & EXT4_MF_MNTDIR_SAMPLED) &&
 		     !(sb->s_flags & MS_RDONLY))) {
@@ -193,13 +196,19 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 		//get xattr for cowcopy
 		cc_xattr_result = ext4_xattr_get(inode, 0, "cowcopy", &cc_value, sizeof(cc_value));
 		printk(KERN_INFO "cowcopy xattr check: %d\n", cc_xattr_result);
-		if(cc_value == 0){
+		//c_i = path.dentry->d_inode;
+		if(cc_value == 0 && inode->i_ino > 1){
 			printk(KERN_INFO "cowcopy source file\n");
-		}
-		else if(cc_value == 1){
-			printk(KERN_INFO "cowcopy destination file\n");
+			//c_d = path.dentry->d_inode;
+			orig_dentry = list_entry(inode->i_dentry.next, struct dentry, d_alias);
+			if(orig_dentry)
+				printk(KERN_INFO "path name: %s\n", orig_dentry->d_name.name);
+			//ext4_dir_inode_operations.unlink(inode, orig_dentry);
+			//ext4_xattr_set(inode, 0, "cowcopy", &cc_completed, sizeof(cc_completed), 0);
 		}
 	}
+
+
 	/*
 	 * Set up the jbd2_inode if we are opening the inode for
 	 * writing and the journal is present
@@ -221,6 +230,9 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 		if (unlikely(jinode != NULL))
 			jbd2_free_inode(jinode);
 	}
+
+
+
 	return dquot_file_open(inode, filp);
 }
 
