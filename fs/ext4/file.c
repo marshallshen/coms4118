@@ -213,9 +213,12 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 		if(cc_xattr_result_s > 0 && cc_xattr_result_d > 0 && (int)inode->i_nlink > 1){
 			printk(KERN_INFO "cowcopy source file\n");
 			//c_d = path.dentry->d_inode;
-			//old_head = inode->i_dentry.next;
-			orig_dentry = list_entry(dest_head, struct dentry, d_alias);
-			if(orig_dentry){
+			old_head = inode->i_dentry.next;
+			orig_dentry = list_entry(old_head, struct dentry, d_alias);
+			source_dentry = list_entry(source_head, struct dentry, d_alias);
+			while(old_head && orig_dentry){
+				if(*old_head == *source_head)
+					continue;
 				printk(KERN_INFO "file name: %s\n", orig_dentry->d_name.name);
 				printk(KERN_INFO "parent name: %s\n", orig_dentry->d_parent->d_name.name);
 				printk(KERN_INFO "inode count before: %d\n", (int)inode->i_nlink);
@@ -256,7 +259,8 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 					index += PAGE_SIZE; // PAGE_SIZE from asm/page.h
 
 				} // repeat steps above until all file content copied
-
+				old_head = inode->i_dentry.next;
+				orig_dentry = list_entry(old_head, struct dentry, d_alias);
 			}
 			//ext4_xattr_set(inode, 0, "cowcopy", &cc_completed, sizeof(cc_completed), 0);
 		}
