@@ -98,11 +98,12 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 	if((c_d = d_alloc(d_d, &s_d->d_name)) == NULL)
 		return -1;
 
-	printk(KERN_INFO "sys_ext4_cowcopy: i_count[%d]", (int) atomic_read(&s_i->i_count));
-	atomic_add(1, &s_i->i_count);
+	printk(KERN_INFO "sys_ext4_cowcopy: i_count[%d]", (int)s_i->i_nlink);
+	//atomic_add(1, &s_i->i_nlink);
 
 	printk(KERN_INFO "sys_ext4_cowcopy: d_alloc'd new dentry");
 	ext4_dir_inode_operations.link(s_d, d_i, c_d);
+	printk(KERN_INFO "sys_ext4_cowcopy: after link i_count[%d]", (int)s_i->i_nlink);
 	// change permissions of both to read only - save permissions?
 	// update type, so we know that the file is cow or not
 	printk(KERN_INFO "sys_ext4_cowcopy: success");
