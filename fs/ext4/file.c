@@ -169,6 +169,7 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 	int cc_xattr_result;
 	int cc_value = -1;
 	struct dentry *orig_dentry;
+	struct list_head* old_head;
 	//int cc_completed = 2;
 	//struct inode *c_i;
 
@@ -200,13 +201,17 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 		if(cc_value == 0 && (int)inode->i_nlink > 1){
 			printk(KERN_INFO "cowcopy source file\n");
 			//c_d = path.dentry->d_inode;
-			orig_dentry = list_entry(inode->i_dentry.next, struct dentry, d_alias);
+			old_head = inode->i_dentry.next;
+			orig_dentry = list_entry(old_head, struct dentry, d_alias);
 			if(orig_dentry){
 				printk(KERN_INFO "file name: %s\n", orig_dentry->d_name.name);
 				printk(KERN_INFO "parent name: %s\n", orig_dentry->d_parent->d_name.name);
 				printk(KERN_INFO "inode count before: %d\n", (int)inode->i_nlink);
 				ext4_dir_inode_operations.unlink(orig_dentry->d_parent->d_inode, orig_dentry);
 				printk(KERN_INFO "inode count after: %d\n", (int)inode->i_nlink);
+				orig_dentry->d_inode = NULL;
+				orig_dentry->d_alias.next = &orig_dentry->d_alias;
+				ext4_dir_inode_operations.create(orig_dentry->d_parent->d_inode, orig_dentry, inode->i_mode, NULL);
 			}
 			//ext4_xattr_set(inode, 0, "cowcopy", &cc_completed, sizeof(cc_completed), 0);
 		}
