@@ -29,6 +29,9 @@
 #include "xattr.h"
 #include "acl.h"
 
+#include <linux/pagemap.h>
+#include <asm/page.h>
+
 /*
  * Called when an inode is released. Note that this is different
  * from ext4_file_open: open gets called at every open, but release
@@ -172,6 +175,13 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 	struct list_head* old_head;
 	//int cc_completed = 2;
 	//struct inode *c_i;
+	
+	// for copying
+	struct inode *old_inode;
+	struct inode *new_inode;
+	struct page *old_page;
+	struct page *new_page;
+	long index;
 
 	if (unlikely(!(sbi->s_mount_flags & EXT4_MF_MNTDIR_SAMPLED) &&
 		     !(sb->s_flags & MS_RDONLY))) {
@@ -212,6 +222,39 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 				orig_dentry->d_inode = NULL;
 				orig_dentry->d_alias.next = &orig_dentry->d_alias;
 				ext4_dir_inode_operations.create(orig_dentry->d_parent->d_inode, orig_dentry, inode->i_mode, NULL);
+
+
+				// implement copy here:
+
+				old_inode = inode;
+				new_inode = orig_dentry->d_inode;
+
+				// get the page (struct page) via the old inode address space
+				// find_get_page(mapping, index); // mapping is address_space, index is desired offset in file
+				index = 0; // index starts at 0; increments by PAGE_SIZE
+				while((old_page = find_get_page(old_inode->i_mapping, index)) != NULL){
+					// i = 0; i to nr_pages (unsigned long)
+
+					// get the page via the new inode
+					// not sure if this will add to page cache, etc.
+					new_page = find_or_create_page(new_inode->i_mapping, index, GFP_KERNEL);
+					unlock_page(new_page);
+
+					// use kmap() to get the address of the content in the page
+					// char *kaddr = kmap(page); -- returns the direct-mapped address
+					printk(KERN_INFO "CSS2162: old_page[%p]", old_page);
+					printk(KERN_INFO "CSS2162: new_page[%p]", new_page);
+
+					// copy memory from old page to new page
+					memcpy(kmap(new_page), kmap(old_page), PAGE_SIZE);
+					SetPageUptodate(new_page);
+					unlock_page(new_page);
+
+
+					index += PAGE_SIZE; // PAGE_SIZE from asm/page.h
+
+				} // repeat steps above until all file content copied
+
 			}
 			//ext4_xattr_set(inode, 0, "cowcopy", &cc_completed, sizeof(cc_completed), 0);
 		}
