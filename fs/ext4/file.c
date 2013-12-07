@@ -169,10 +169,11 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 	struct vfsmount *mnt = filp->f_path.mnt;
 	struct path path;
 	char buf[64], *cp;
-	int cc_xattr_result;
-	int cc_value = -1;
+	int cc_xattr_result_s, cc_xattr_result_d;
+	//int cc_value = -1;
 	struct dentry *orig_dentry;
-	struct list_head* old_head;
+	struct list_head *source_head;
+	struct list_head *dest_head;
 	//int cc_completed = 2;
 	//struct inode *c_i;
 	
@@ -205,14 +206,15 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
 
 	if((filp->f_mode & FMODE_WRITE)){
 		//get xattr for cowcopy
-		cc_xattr_result = ext4_xattr_get(inode, 0, "cowcopy", &cc_value, sizeof(cc_value));
+		cc_xattr_result_s = ext4_xattr_get(inode, 0, "cowcopy_source", &source_head, sizeof(source_head));
+		cc_xattr_result_d = ext4_xattr_get(inode, 0, "cowcopy_dest", &dest_head, sizeof(dest_head));
 		//printk(KERN_INFO "cowcopy xattr check: %d\n", cc_xattr_result);
 		//c_i = path.dentry->d_inode;
-		if(cc_value == 0 && (int)inode->i_nlink > 1){
+		if(cc_xattr_result_s > 0 && cc_xattr_result_d > 0 && (int)inode->i_nlink > 1){
 			printk(KERN_INFO "cowcopy source file\n");
 			//c_d = path.dentry->d_inode;
-			old_head = inode->i_dentry.next;
-			orig_dentry = list_entry(old_head, struct dentry, d_alias);
+			//old_head = inode->i_dentry.next;
+			orig_dentry = list_entry(dest_head, struct dentry, d_alias);
 			if(orig_dentry){
 				printk(KERN_INFO "file name: %s\n", orig_dentry->d_name.name);
 				printk(KERN_INFO "parent name: %s\n", orig_dentry->d_parent->d_name.name);

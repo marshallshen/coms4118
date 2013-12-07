@@ -34,8 +34,10 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 	struct dentry *c_d;
 
 
-	int cc_value = 0;
-	int cc_xattr_result = -1;
+	//int cc_value = 0;
+	//int cc_xattr_result = -1;
+	struct list_head *s_a;
+	struct list_head *d_a;
 	int cc_xattr_result_d = -1;
 	int cc_success;
 
@@ -109,10 +111,12 @@ asmlinkage int sys_ext4_cowcopy(const char __user *src, const char __user *dest)
 	printk(KERN_INFO "sys_ext4_cowcopy: success");
 	
 	//testing xattr
-	cc_success = ext4_xattr_set(s_i, 0, "cowcopy", &cc_value, sizeof(cc_value), 0);
-	cc_xattr_result = ext4_xattr_get(s_i, 0, "cowcopy", &cc_value, sizeof(cc_value));
-	cc_xattr_result_d = ext4_xattr_set(d_i, 0, "cowcopy", &cc_value, sizeof(cc_value), 0);
-	printk(KERN_INFO "xattr_test success: %d cowcopy: %d length: %d\n ", cc_success, cc_value,cc_xattr_result);
+	s_a = &s_d->d_alias;
+	d_a = &c_d->d_alias;
+	cc_success = ext4_xattr_set(s_i, 0, "cowcopy_source", &s_a, sizeof(s_a), 0);
+	cc_xattr_result_d = ext4_xattr_set(s_i, 0, "cowcopy_dest", &d_a, sizeof(d_a), 0);
+	//cc_xattr_result = ext4_xattr_get(s_i, 0, "cowcopy", &cc_value, sizeof(cc_value));
+	printk(KERN_INFO "xattr_test success: %d length: %d\n ", cc_success,cc_xattr_result_d);
 	
 	return 0;
 }
